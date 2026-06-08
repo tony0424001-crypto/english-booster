@@ -796,10 +796,20 @@ function showWordBox(w){
 }
 
 // ======= QUIZ =======
+// ===== AI QUIZ ENGINE =====
+// aiQueue: buffer of AI-generated questions
+// seenHashes: dedup set so AI never repeats
+let aiQueue = [];
+let aiGenerating = false;
+let seenHashes = new Set(JSON.parse(localStorage.getItem('eb_seen')||'[]'));
+let totalAnswered = 0;
+
+function qKey(cat,diff,type){ return cat+'|'+diff+'|'+type; }
+
 function getQList(){
+  // Return builtin bank as offline fallback
   const bank=QB[quizCat]?.[quizDiff]?.[quizType];
   if(bank&&bank.length) return bank;
-  // fallback
   for(const cat of Object.keys(QB)){
     const b=QB[cat]?.[quizDiff]?.[quizType];
     if(b&&b.length) return b;
@@ -807,9 +817,9 @@ function getQList(){
   return QB.daily.easy.vocab;
 }
 
-function loadQ(){
-  const list=getQList();
-  const q=list[quizIdx%list.length];
+function hashQ(q){ return btoa(unescape(encodeURIComponent(q.q))).slice(0,20); }
+
+function renderQuizCard(q, isAI){
   quizAnswered=false;
   const catNames={daily:'日常生活',travel:'搭機/旅遊',biz:'職場/商務',food:'餐廳/購物',medical:'醫療/健康',school:'學校/教育'};
   const diffNames={easy:'⭐ 簡單',mid:'⭐⭐ 普通',hard:'⭐⭐⭐ 困難'};
@@ -817,8 +827,8 @@ function loadQ(){
   document.getElementById('quizTagCat').textContent=catNames[quizCat];
   document.getElementById('quizTagDiff').textContent=diffNames[quizDiff];
   document.getElementById('quizTagType').textContent=typeNames[quizType];
-  document.getElementById('quizCount').textContent=(quizIdx%list.length+1)+'/'+list.length;
-  document.getElementById('quizProg').style.width=((quizIdx%list.length+1)/list.length*100)+'%';
+  document.getElementById('quizCount').textContent='第 '+(totalAnswered+1)+' 題'+(isAI?' 🤖':'');
+  document.getElementById('quizProg').style.width='100%';
   document.getElementById('quizQ').textContent=q.q;
   document.getElementById('quizExplain').classList.add('hidden');
   const wc=document.getElementById('quizWordChips'); wc.innerHTML='';
@@ -826,14 +836,121 @@ function loadQ(){
   q.ch.forEach((c,i)=>{
     const b=document.createElement('button');b.className='opt';
     b.textContent=String.fromCharCode(65+i)+'. '+c;
-    b.onclick=()=>answerQ(i,q.ans,q.ex,q.words,list.length);
+    b.onclick=()=>answerQ(i,q.ans,q.ex,q.words);
     opts.appendChild(b);
   });
 }
 
-function answerQ(chosen,correct,ex,words,total){
+function showQuizLoading(){
+  document.getElementById('quizQ').textContent='AI 出題中...';
+  document.getElementById('quizOpts').innerHTML='<div style="grid-column:span 2;text-align:center;padding:20px;color:var(--muted)"><div class="dot-loader" style="justify-content:center"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><div style="margin-top:8px;font-size:12px">正在生成高品質題目，請稍候...</div></div>';
+  document.getElementById('quizExplain').classList.add('hidden');
+  document.getElementById('quizWordChips').innerHTML='';
+}
+
+function loadQ(){
+  // If AI queue has questions ready, use them
+  if(aiQueue.length > 0){
+    const q = aiQueue.shift();
+    renderQuizCard(q, true);
+    // Pre-fetch more if queue is running low
+    if(aiQueue.length < 3) prefetchAI();
+    return;
+  }
+  // Fall back to builtin while AI loads
+  const list=getQList();
+  if(list.length > 0){
+    const q=list[quizIdx%list.length];
+    renderQuizCard(q, false);
+    quizIdx++;
+    // Also start fetching AI questions in background
+    if(!aiGenerating) prefetchAI();
+    return;
+  }
+  // No builtin either, show loading state
+  showQuizLoading();
+  prefetchAI(true); // force immediate
+}
+
+async function prefetchAI(immediate=false){
+  if(aiGenerating) return;
+  // Don't prefetch if already have 8+ in queue
+  if(!immediate && aiQueue.length >= 8) return;
+  aiGenerating = true;
+  try {
+    const catNames={daily:'日常生活',travel:'搭機/旅遊',biz:'職場/商務',food:'餐廳/購物',medical:'醫療/健康',school:'學校/教育'};
+    const diffMap={easy:'初級（國中程度，句子簡單）',mid:'中級（高中程度，有商務詞彙）',hard:'高級（多益750+，有複雜文法與長篇閱讀）'};
+    const typeMap={vocab:'單字選擇題（考單字意思或用法）',grammar:'語彙文法題（考時態、介系詞、連接詞等）',reading:'閱讀理解題（給一小段公告/信件/說明，問內容）'};
+    const seen = [...seenHashes].slice(-100); // send last 100 to avoid repeat
+
+    const prompt = `你是多益（TOEIC）出題老師。請生成5道「${catNames[quizCat]}」主題的英文題目。
+難度：${diffMap[quizDiff]}
+題型：${typeMap[quizType]}
+目標對象：台灣學習者，母語是中文
+
+每題必須包含：
+- 題目句子（英文）
+- 4個選項（英文）
+- 正確答案索引（0-3）
+- 繁體中文解析（說明為什麼對、常見錯誤）
+- 2-4個題目中的重點單字（英文單字 + 繁體中文意思）
+
+嚴格規定：
+1. 題目不可以重複或相似（以下是已出過的題目摘要，請完全避開類似的：${seen.slice(-20).join(', ')||'無'})
+2. 閱讀題要有完整的情境段落（公告/備忘錄/email/廣告等）
+3. 單字題要有實用的多益常考詞彙
+4. 文法題要考實際職場/生活場景
+
+只回傳JSON陣列，不含任何markdown或說明文字：
+[{"q":"題目","ch":["A","B","C","D"],"ans":0,"ex":"繁體中文解析","words":[{"w":"word","m":"意思"}]}]`;
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        messages: [{role:'user', content: prompt}]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
+    const questions = JSON.parse(text);
+
+    let added = 0;
+    for(const q of questions){
+      if(!q.q || !q.ch || q.ch.length < 4) continue;
+      const h = hashQ(q);
+      if(seenHashes.has(h)) continue;
+      aiQueue.push(q);
+      seenHashes.add(h);
+      added++;
+    }
+    // Persist seen hashes (keep last 500)
+    const arr = [...seenHashes].slice(-500);
+    localStorage.setItem('eb_seen', JSON.stringify(arr));
+
+    // If we were showing loading state, render now
+    if(immediate && added > 0){
+      const q = aiQueue.shift();
+      renderQuizCard(q, true);
+      if(aiQueue.length < 3) prefetchAI();
+    }
+  } catch(e) {
+    console.warn('AI quiz fetch failed, using builtin:', e);
+    if(immediate){
+      // Show builtin as fallback
+      const list = getQList();
+      if(list.length) renderQuizCard(list[quizIdx%list.length], false);
+    }
+  }
+  aiGenerating = false;
+}
+
+function answerQ(chosen,correct,ex,words){
   if(quizAnswered) return;
   quizAnswered=true;
+  totalAnswered++;
   stat.quiz++; if(chosen===correct) stat.correct++;
   if(!stat.cats[quizCat]) stat.cats[quizCat]={total:0,correct:0};
   stat.cats[quizCat].total++; if(chosen===correct) stat.cats[quizCat].correct++;
@@ -850,27 +967,38 @@ function answerQ(chosen,correct,ex,words,total){
     c.onclick=()=>{c.textContent=c.textContent===wo.w?wo.w+' = '+wo.m:wo.w;};
     wc.appendChild(c);
   });
+  // Pre-load next batch while user reads explanation
+  if(aiQueue.length < 3) prefetchAI();
 }
 
-function nextQ(){ quizIdx++; loadQ(); }
+function nextQ(){
+  // Clear queue when settings change
+  loadQ();
+}
 
-// Tab handlers
+// Tab handlers — clear AI queue when settings change
+function resetQuiz(){
+  aiQueue=[];
+  aiGenerating=false;
+  quizIdx=0;
+  loadQ();
+}
 document.getElementById('quizCats').querySelectorAll('.ctab').forEach(el=>{
   el.onclick=()=>{
     document.getElementById('quizCats').querySelectorAll('.ctab').forEach(e=>e.classList.remove('on'));
-    el.classList.add('on'); quizCat=el.dataset.cat; quizIdx=0; loadQ();
+    el.classList.add('on'); quizCat=el.dataset.cat; resetQuiz();
   };
 });
 document.getElementById('quizDiffs').querySelectorAll('.diff-tab').forEach(el=>{
   el.onclick=()=>{
     document.getElementById('quizDiffs').querySelectorAll('.diff-tab').forEach(e=>{e.classList.remove('on','easy','mid','hard');});
-    el.classList.add('on',el.dataset.diff); quizDiff=el.dataset.diff; quizIdx=0; loadQ();
+    el.classList.add('on',el.dataset.diff); quizDiff=el.dataset.diff; resetQuiz();
   };
 });
 document.getElementById('quizTypes').querySelectorAll('.ctab').forEach(el=>{
   el.onclick=()=>{
     document.getElementById('quizTypes').querySelectorAll('.ctab').forEach(e=>e.classList.remove('on'));
-    el.classList.add('on'); quizType=el.dataset.type; quizIdx=0; loadQ();
+    el.classList.add('on'); quizType=el.dataset.type; resetQuiz();
   };
 });
 
