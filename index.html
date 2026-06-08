@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>English Booster 多益學習工具</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f8fa;--surface:#fff;--border:#e2e6ea;--text:#1a1d23;--muted:#6b7280;
+  --hint:#9ca3af;--primary:#1e5fa8;--primary-dark:#163f72;--primary-light:#e8f0fb;
+  --success:#16a34a;--success-light:#dcfce7;--danger:#dc2626;--danger-light:#fee2e2;
+  --warn:#d97706;--warn-light:#fef3c7;--radius:10px;--radius-sm:6px;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.app{max-width:780px;margin:0 auto;padding:0 0 60px}
+/* TOPBAR */
+.topbar{background:var(--primary-dark);color:#fff;padding:13px 18px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
+.topbar h1{font-size:16px;font-weight:600;flex:1}
+.topbar small{font-size:11px;opacity:.55}
+/* NAV */
+.nav{display:flex;background:var(--surface);border-bottom:1.5px solid var(--border);overflow-x:auto;position:sticky;top:46px;z-index:99}
+.nav::-webkit-scrollbar{height:0}
+.nav-item{padding:11px 14px;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer;border-bottom:2.5px solid transparent;display:flex;align-items:center;gap:5px;transition:all .15s;flex-shrink:0}
+.nav-item:hover{color:var(--primary);background:#f0f6ff}
+.nav-item.on{color:var(--primary);border-bottom-color:var(--primary);font-weight:600;background:#f8fbff}
+/* PANE */
+.pane{display:none;padding:16px;flex-direction:column;gap:14px}
+.pane.on{display:flex}
+/* UTILS */
+.lbl{font-size:10px;color:var(--hint);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px}
+.card{background:var(--surface);border-radius:var(--radius);padding:14px;border:1px solid var(--border)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{padding:7px 14px;border-radius:var(--radius-sm);font-size:12px;border:1px solid var(--border);cursor:pointer;background:var(--surface);color:var(--text);display:inline-flex;align-items:center;gap:5px;transition:all .15s;font-family:inherit}
+.btn:hover{background:#f0f6ff;border-color:var(--primary);color:var(--primary)}
+.btn.pri{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn.pri:hover{background:var(--primary-dark)}
+.btn.sm{font-size:11px;padding:4px 10px}
+.btn.danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+.tag{font-size:10px;padding:2px 8px;border-radius:20px;display:inline-block}
+.tag.blue{background:var(--primary-light);color:var(--primary)}
+.tag.green{background:var(--success-light);color:var(--success)}
+.tag.orange{background:var(--warn-light);color:var(--warn)}
+.tag.red{background:var(--danger-light);color:var(--danger)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:5px 12px;background:var(--primary-light);color:var(--primary);border-radius:20px;font-size:12px;cursor:pointer;border:1px solid #c3d8f4;transition:all .15s}
+.chip:hover,.chip.sel{background:#c3d8f4}
+.progress-bar{height:5px;background:var(--border);border-radius:5px;overflow:hidden}
+.progress-fill{height:100%;background:var(--primary);transition:width .4s}
+.dot-loader{display:flex;gap:5px;align-items:center}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--hint);animation:blink 1.2s infinite}
+.dot:nth-child(2){animation-delay:.3s}.dot:nth-child(3){animation-delay:.6s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+.loading-box{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;gap:12px;color:var(--muted);font-size:13px}
+.hidden{display:none!important}
+select{padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);font-size:12px;background:var(--surface);color:var(--text);font-family:inherit;cursor:pointer}
+
+/* ============ SCREENSHOT ============ */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:28px;text-align:center;cursor:pointer;transition:all .2s}
+.upload-zone:hover{border-color:var(--primary);background:var(--primary-light)}
+.upload-zone .icon{font-size:36px;margin-bottom:8px;display:block}
+.upload-zone p{font-size:14px;color:var(--muted)}
+.upload-zone small{font-size:11px;color:var(--hint)}
+.word-detail{background:#f8fbff;border:1px solid #c3d8f4;border-radius:var(--radius-sm);padding:12px;font-size:12.5px;line-height:1.8}
+.word-detail .whead{font-size:15px;font-weight:600;color:var(--primary);margin-bottom:6px}
+
+/* ============ QUIZ ============ */
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.opt{padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12.5px;cursor:pointer;background:var(--surface);color:var(--text);text-align:left;transition:all .15s;line-height:1.5}
+.opt:hover:not(.ok):not(.ng){background:var(--primary-light);border-color:var(--primary)}
+.opt.ok{background:var(--success-light);border-color:var(--success);color:#14532d}
+.opt.ng{background:var(--danger-light);border-color:var(--danger);color:#7f1d1d}
+.explain-box{background:#f0fdf4;border-left:3px solid var(--success);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:10px 12px;font-size:12px;line-height:1.7;color:#166534;margin-top:8px}
+.quiz-q-text{font-size:14px;line-height:1.8;padding:10px 0 6px;white-space:pre-wrap}
+.cat-row{display:flex;gap:6px;flex-wrap:wrap}
+.ctab{padding:5px 12px;border-radius:20px;font-size:11px;border:1px solid var(--border);cursor:pointer;background:var(--surface);color:var(--muted);transition:all .15s}
+.ctab:hover{border-color:var(--primary);color:var(--primary)}
+.ctab.on{background:var(--primary-dark);color:#fff;border-color:var(--primary-dark)}
+.diff-tab{padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);cursor:pointer;background:var(--surface);color:var(--muted)}
+.diff-tab.on.easy{background:#dcfce7;color:#166534;border-color:#86efac}
+.diff-tab.on.mid{background:#fef3c7;color:#92400e;border-color:#fcd34d}
+.diff-tab.on.hard{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+.score-badge{font-size:20px;font-weight:700;color:var(--primary)}
+
+/* ============ WORDBOOK ============ */
+.wb-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.wb-row:last-child{border-bottom:none}
+.wb-en{font-size:13px;font-weight:600}
+.wb-zh{font-size:11px;color:var(--muted);margin-top:2px}
+.wb-tag{font-size:10px;padding:1px 6px;border-radius:12px;background:var(--primary-light);color:var(--primary);margin-left:6px}
+
+/* ============ DAILY ============ */
+.daily-hero{background:linear-gradient(135deg,var(--primary-dark) 0%,var(--primary) 100%);border-radius:var(--radius);padding:20px;color:#fff}
+.daily-en{font-size:16px;font-weight:500;line-height:1.7;margin-bottom:8px}
+.daily-zh{font-size:13px;opacity:.8}
+.daily-btns{display:flex;gap:8px;margin-top:14px}
+.dbtn{padding:5px 12px;border-radius:20px;font-size:11px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;transition:all .15s}
+.dbtn:hover{background:rgba(255,255,255,.25)}
+
+/* ============ WRITE ============ */
+textarea.write-area{border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:13px;width:100%;min-height:90px;resize:vertical;outline:none;font-family:inherit;line-height:1.7;transition:border .2s}
+textarea.write-area:focus{border-color:var(--primary)}
+.fb-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;line-height:1.6}
+
+/* ============ WORD GAMES ============ */
+.game-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.gtab{padding:6px 13px;border-radius:20px;font-size:11px;border:1px solid var(--border);cursor:pointer;background:var(--surface);color:var(--muted);transition:all .15s}
+.gtab:hover{border-color:var(--primary);color:var(--primary)}
+.gtab.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.game-area{min-height:300px}
+
+/* Connect game */
+.connect-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.connect-col{display:flex;flex-direction:column;gap:8px}
+.connect-item{padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;text-align:center;transition:all .2s;background:var(--surface)}
+.connect-item:hover:not(.matched){border-color:var(--primary);background:var(--primary-light)}
+.connect-item.selected{border-color:var(--primary);background:var(--primary-light);color:var(--primary);font-weight:600}
+.connect-item.matched{border-color:var(--success);background:var(--success-light);color:#14532d;cursor:default}
+.connect-item.wrong{border-color:var(--danger);background:var(--danger-light);animation:shake .3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* Fill blank */
+.fill-q{font-size:15px;line-height:2;letter-spacing:.3px}
+.fill-blank{display:inline-block;border-bottom:2px solid var(--primary);min-width:80px;padding:2px 8px;font-weight:600;color:var(--primary);text-align:center}
+.fill-input{border:none;border-bottom:2px solid var(--primary);background:transparent;font-size:15px;font-weight:600;color:var(--primary);outline:none;text-align:center;min-width:80px;font-family:inherit}
+
+/* Flashcard */
+.flashcard{perspective:800px;cursor:pointer;height:180px}
+.flashcard-inner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
+.flashcard.flipped .flashcard-inner{transform:rotateY(180deg)}
+.flashcard-front,.flashcard-back{position:absolute;width:100%;height:100%;backface-visibility:hidden;border-radius:var(--radius);display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border)}
+.flashcard-front{background:var(--surface)}
+.flashcard-back{background:var(--primary-dark);color:#fff;transform:rotateY(180deg)}
+.fc-word{font-size:28px;font-weight:700}
+.fc-hint{font-size:12px;color:var(--muted);margin-top:6px}
+.fc-meaning{font-size:22px;font-weight:600}
+.fc-phonetic{font-size:13px;opacity:.7;margin-top:4px}
+
+/* Whack */
+.whack-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.whack-hole{height:70px;border:1.5px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .15s;background:var(--surface);font-weight:500;text-align:center;padding:4px}
+.whack-hole.active{border-color:var(--primary);background:var(--primary-light);color:var(--primary)}
+.whack-hole.hit{border-color:var(--success);background:var(--success-light);animation:pop .3s}
+.whack-hole.miss{border-color:var(--danger);background:var(--danger-light)}
+@keyframes pop{0%{transform:scale(.8)}50%{transform:scale(1.1)}100%{transform:scale(1)}}
+
+/* Spell */
+.spell-letters{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:10px 0}
+.spell-letter{width:38px;height:38px;border:1.5px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;cursor:pointer;transition:all .15s;background:var(--surface)}
+.spell-letter:hover:not(.used){border-color:var(--primary);background:var(--primary-light);color:var(--primary)}
+.spell-letter.used{opacity:.3;cursor:default}
+.spell-answer{display:flex;gap:6px;justify-content:center;margin:10px 0;flex-wrap:wrap}
+.spell-slot{width:38px;height:38px;border-bottom:2px solid var(--primary);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:var(--primary);cursor:pointer}
+
+/* Listen */
+.listen-choices{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+
+/* ============ STAT ============ */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center}
+.stat-num{font-size:26px;font-weight:700;color:var(--primary)}
+.stat-label{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* ===== SYNC ===== */
+.sync-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0fdf4;border:1px solid #86efac;border-radius:var(--radius-sm);font-size:12px;color:#166534}
+.sync-bar.err{background:#fef2f2;border-color:#fca5a5;color:#991b1b}
+.sync-bar.warn{background:#fefce8;border-color:#fde047;color:#854d0e}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.on{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius);padding:20px;width:min(440px,92vw);box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.modal h2{font-size:15px;font-weight:600;margin-bottom:12px}
+.modal p{font-size:12.5px;color:var(--muted);line-height:1.7;margin-bottom:10px}
+.modal input{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;outline:none;font-family:inherit;margin-bottom:10px}
+.modal input:focus{border-color:var(--primary)}
+.modal .step{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:1.6}
+.modal .step:last-of-type{border-bottom:none}
+.modal .step-num{width:20px;height:20px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
+
+</style>
+</head>
+<body>
+<div class="app">
+<div class="topbar">
+  <span style="font-size:22px">📚</span>
+  <h1>English Booster</h1>
+  <small>多益全方位學習工具</small>
+</div>
+
+<div class="nav" id="nav">
+  <div class="nav-item on" data-tab="ocr">📷 截圖解析</div>
+  <div class="nav-item" data-tab="quiz">📝 考古題</div>
+  <div class="nav-item" data-tab="games">🎮 單字遊戲</div>
+  <div class="nav-item" data-tab="wb">📖 單字本</div>
+  <div class="nav-item" data-tab="daily">🌅 每日一句</div>
+  <div class="nav-item" data-tab="write">✏️ 寫作批改</div>
+  <div class="nav-item" data-tab="stats">📊 學習統計</div>
+</div>
+
+<!-- ===== 截圖解析 ===== -->
+<div class="pane on" id="pane-ocr">
+  <div class="lbl">上傳截圖或貼上圖片</div>
+  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fi').click()">
+    <span class="icon">📸</span>
+    <p>點擊上傳 或 Ctrl+V 貼上截圖</p>
+    <small>支援 PNG、JPG · 拖曳也可以</small>
+  </div>
+  <input type="file" id="fi" accept="image/*" style="display:none">
+  <div id="ocrLoading" class="hidden loading-box">
+    <div class="dot-loader"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <span>AI 正在解析英文中...</span>
+  </div>
+  <div id="ocrResult" class="hidden">
+    <div class="lbl">辨識出的英文</div>
+    <div class="card">
+      <div id="ocrRaw" style="font-size:14px;line-height:1.8"></div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)">
+        🌐 整句翻譯：<span id="ocrTrans" style="color:var(--text)"></span>
+      </div>
+    </div>
+    <div class="lbl" style="margin-top:4px">點擊單字查看詳細解析</div>
+    <div class="chips" id="ocrChips"></div>
+    <div id="ocrWordBox" class="hidden word-detail">
+      <div class="whead" id="ocrWHead"></div>
+      <div id="ocrWBody"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn sm" onclick="spk(selWord)">🔊 發音</button>
+        <button class="btn sm" onclick="saveToWB()">🔖 加入單字本</button>
+        <button class="btn sm" onclick="copyText(selWord)">📋 複製</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 考古題 ===== -->
+<div class="pane" id="pane-quiz">
+  <div class="card" style="padding:12px">
+    <div class="lbl" style="margin-bottom:6px">主題分類</div>
+    <div class="cat-row" id="quizCats">
+      <div class="ctab on" data-cat="daily">日常生活</div>
+      <div class="ctab" data-cat="travel">搭機/旅遊</div>
+      <div class="ctab" data-cat="biz">職場/商務</div>
+      <div class="ctab" data-cat="food">餐廳/購物</div>
+      <div class="ctab" data-cat="medical">醫療/健康</div>
+      <div class="ctab" data-cat="school">學校/教育</div>
+    </div>
+    <div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap">
+      <div>
+        <div class="lbl" style="margin-bottom:4px">難度</div>
+        <div class="cat-row" id="quizDiffs">
+          <div class="diff-tab on easy" data-diff="easy">⭐ 簡單</div>
+          <div class="diff-tab" data-diff="mid">⭐⭐ 普通</div>
+          <div class="diff-tab" data-diff="hard">⭐⭐⭐ 困難</div>
+        </div>
+      </div>
+      <div>
+        <div class="lbl" style="margin-bottom:4px">題型</div>
+        <div class="cat-row" id="quizTypes">
+          <div class="ctab on" data-type="vocab">單字</div>
+          <div class="ctab" data-type="grammar">語彙</div>
+          <div class="ctab" data-type="reading">閱讀</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card" id="quizCard">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="display:flex;gap:6px">
+        <span class="tag blue" id="quizTagCat"></span>
+        <span class="tag orange" id="quizTagDiff"></span>
+        <span class="tag" style="background:#f1f5f9;color:#475569" id="quizTagType"></span>
+      </div>
+      <span style="font-size:11px;color:var(--hint)" id="quizCount"></span>
+    </div>
+    <div class="progress-bar" style="margin-bottom:10px"><div class="progress-fill" id="quizProg" style="width:0%"></div></div>
+    <div class="quiz-q-text" id="quizQ"></div>
+    <div class="quiz-opts" id="quizOpts"></div>
+    <div id="quizWordChips" class="chips" style="margin-top:10px"></div>
+    <div id="quizExplain" class="explain-box hidden"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn sm" onclick="spk(document.getElementById('quizQ').textContent)">🔊 朗讀題目</button>
+      <button class="btn pri sm" style="margin-left:auto" onclick="nextQ()">下一題 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 單字遊戲 ===== -->
+<div class="pane" id="pane-games">
+  <div>
+    <div class="lbl">選擇遊戲模式</div>
+    <div class="game-tabs" id="gameTabs">
+      <div class="gtab on" data-game="connect">🔗 連連看</div>
+      <div class="gtab" data-game="fill">📝 填空題</div>
+      <div class="gtab" data-game="spell">🔤 拼字</div>
+      <div class="gtab" data-game="flash">🃏 閃卡</div>
+      <div class="gtab" data-game="whack">🔨 打地鼠</div>
+      <div class="gtab" data-game="listen">👂 聽音選字</div>
+    </div>
+  </div>
+  <div>
+    <div class="lbl" style="margin-bottom:4px">詞庫來源</div>
+    <div class="row">
+      <select id="gameWordSrc" onchange="initGame()">
+        <option value="builtin">內建詞庫（多益常見）</option>
+        <option value="wordbook">我的單字本</option>
+      </select>
+      <button class="btn sm pri" onclick="initGame()">🔄 重新開始</button>
+      <span id="gameScore" style="font-size:13px;color:var(--primary);font-weight:600"></span>
+    </div>
+  </div>
+  <div class="card game-area" id="gameArea"></div>
+</div>
+
+<!-- ===== 單字本 ===== -->
+<div class="pane" id="pane-wb">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <div class="lbl" style="margin:0">已儲存單字</div>
+    </div>
+    <div class="row">
+      <span id="wbCount" style="font-size:12px;color:var(--muted)"></span>
+      <button class="btn sm" onclick="exportWB()">📤 匯出</button>
+      <button class="btn sm danger" onclick="clearWB()">清空</button>
+    </div>
+  </div>
+  <input type="text" id="wbSearch" placeholder="搜尋單字..." style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;width:100%;outline:none">
+  <div id="wbList"></div>
+  <div id="wbEmpty" class="hidden" style="text-align:center;padding:32px;color:var(--hint);font-size:14px">
+    📌 還沒有儲存任何單字<br><small style="font-size:12px">在截圖解析中加入單字</small>
+  </div>
+</div>
+
+<!-- ===== 每日一句 ===== -->
+<div class="pane" id="pane-daily">
+  <div>
+    <div class="lbl">今日挑戰</div>
+    <div class="daily-hero">
+      <div class="daily-en" id="dailyEn"></div>
+      <div class="daily-zh" id="dailyZh"></div>
+      <div class="daily-btns">
+        <div class="dbtn" onclick="spk(document.getElementById('dailyEn').textContent)">🔊 聽發音</div>
+        <div class="dbtn" onclick="nextDaily()">🔄 換一句</div>
+        <div class="dbtn" onclick="saveDailyWord()">🔖 存這句單字</div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="lbl">句中單字解析（點擊查看）</div>
+    <div class="chips" id="dailyChips"></div>
+  </div>
+  <div id="dailyWBox" class="hidden word-detail">
+    <div class="whead" id="dailyWHead"></div>
+    <div id="dailyWBody"></div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn sm" onclick="spk(document.getElementById('dailyWHead').textContent.split(' /')[0])">🔊 發音</button>
+      <button class="btn sm" onclick="saveToWBWord(document.getElementById('dailyWHead').textContent.split(' /')[0], document.getElementById('dailyWBody').textContent)">🔖 加入單字本</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 寫作批改 ===== -->
+<div class="pane" id="pane-write">
+  <div class="lbl">輸入英文，AI 幫你批改文法</div>
+  <textarea class="write-area" id="writeInput" placeholder="Type something in English...&#10;例如：Yesterday I go to store and buyed some food."></textarea>
+  <div class="row">
+    <button class="btn pri" onclick="gradeWriting()">✨ AI 批改</button>
+    <button class="btn" onclick="spk(document.getElementById('writeInput').value)">🔊 朗讀</button>
+    <button class="btn" onclick="document.getElementById('writeInput').value=''">🗑️ 清除</button>
+  </div>
+  <div id="writeLoading" class="hidden loading-box">
+    <div class="dot-loader"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <span>AI 批改中，請稍候...</span>
+  </div>
+  <div id="writeFeedback" class="hidden">
+    <div class="lbl">批改結果</div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:13px;font-weight:600">修正版本</span>
+        <div class="score-badge" id="writeScore"></div>
+      </div>
+      <div id="writeCorrected" style="font-size:13px;line-height:1.8;color:var(--text);padding:10px;background:var(--bg);border-radius:var(--radius-sm)"></div>
+    </div>
+    <div class="card" style="margin-top:0">
+      <div class="lbl" style="margin-bottom:6px">詳細說明</div>
+      <div id="fbItems"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 學習統計 ===== -->
+<div class="pane" id="pane-stats">
+  <div class="lbl">學習概覽</div>
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-num" id="stWords">0</div><div class="stat-label">單字本數量</div></div>
+    <div class="stat-card"><div class="stat-num" id="stQuiz">0</div><div class="stat-label">答過題目</div></div>
+    <div class="stat-card"><div class="stat-num" id="stCorrect">0%</div><div class="stat-label">答對率</div></div>
+  </div>
+  <div class="card">
+    <div class="lbl" style="margin-bottom:8px">各主題答題分佈</div>
+    <div id="statChart"></div>
+  </div>
+  <div class="card">
+    <div class="lbl" style="margin-bottom:6px">最近加入的單字</div>
+    <div id="statRecent"></div>
+  </div>
+</div>
+</div><!-- end .app -->
+
+<script>
+// ======= DATA STORE =======
+const WB_KEY='eb_wb', STAT_KEY='eb_stat';
+let wordbook=JSON.parse(localStorage.getItem(WB_KEY)||'[]');
+let stat=JSON.parse(localStorage.getItem(STAT_KEY)||'{"quiz":0,"correct":0,"cats":{}}');
+let selWord='', selWordData={};
+let quizCat='daily', quizDiff='easy', quizType='vocab', quizIdx=0, quizAnswered=false;
+let dailyIdx=Math.floor(Math.random()*20);
+let curGame='connect', gameScoreVal=0;
+
+// ======= QUIZ BANK =======
+const QB={
+daily:{
+  easy:{
+    vocab:[
+      {q:"I _____ coffee every morning.",ch:["drink","drinks","drank","drinking"],ans:0,ex:"I（第一人稱）現在式用 drink，不加 s。",words:[{w:"coffee",m:"咖啡"},{w:"every",m:"每個"}]},
+      {q:"She _____ to school by bus.",ch:["goes","go","going","gone"],ans:0,ex:"She（第三人稱單數）現在式動詞加 s → goes。",words:[{w:"school",m:"學校"},{w:"bus",m:"公車"}]},
+      {q:"There is a _____ on the table.",ch:["book","books","booking","booked"],ans:0,ex:"There is + 單數名詞。book 是名詞「書」。",words:[{w:"table",m:"桌子"}]},
+      {q:"My mother is a good _____.",ch:["cook","cooked","cooking","cooks"],ans:0,ex:"a good cook = 一位好廚師（cook 作名詞）。",words:[{w:"mother",m:"母親"},{w:"good",m:"好的"}]},
+      {q:"Please _____ the door when you leave.",ch:["close","closed","closes","closing"],ans:0,ex:"祈使句用動詞原形 close（關閉）。",words:[{w:"leave",m:"離開"},{w:"door",m:"門"}]}
+    ],
+    grammar:[
+      {q:"He _____ TV every evening.",ch:["watches","watch","watched","watching"],ans:0,ex:"He（第三人稱單數）習慣動作用現在式，watch → watches。",words:[{w:"evening",m:"傍晚"},{w:"every",m:"每個"}]},
+      {q:"There _____ many people in the park.",ch:["are","is","was","be"],ans:0,ex:"people 是複數，現在式用 are。",words:[{w:"park",m:"公園"},{w:"many",m:"許多"}]},
+      {q:"I haven't seen him _____ last year.",ch:["since","for","during","from"],ans:0,ex:"since + 時間點（last year）；for + 時間長度（two years）。",words:[{w:"seen",m:"看見（see的過去分詞）"}]},
+      {q:"She speaks English _____ than her brother.",ch:["better","more good","gooder","well"],ans:0,ex:"good 的比較級是 better，為不規則變化。",words:[{w:"speak",m:"說"},{w:"brother",m:"兄弟"}]},
+      {q:"Would you like _____ cup of tea?",ch:["a","an","the","some"],ans:0,ex:"cup（輔音開頭）前用 a，表示一杯。",words:[{w:"would like",m:"想要"},{w:"tea",m:"茶"}]}
+    ],
+    reading:[
+      {q:"Notice: The library will be CLOSED on Saturday for cleaning. Regular hours resume on Sunday.\n\nWhat day is the library closed?",ch:["Friday","Saturday","Sunday","Monday"],ans:1,ex:"CLOSED on Saturday = 週六關閉。resume = 恢復。",words:[{w:"closed",m:"關閉的"},{w:"resume",m:"恢復"},{w:"regular",m:"正常的"}]},
+      {q:"Sign: No smoking inside the building. Violators will be fined.\n\nWhat will happen if someone smokes inside?",ch:["They get a prize","They will be fined","They must leave","Nothing happens"],ans:1,ex:"violators will be fined = 違規者將被罰款。fine 作動詞意思是「罰款」。",words:[{w:"violator",m:"違規者"},{w:"fine",m:"罰款"},{w:"sign",m:"告示牌"}]}
+    ]
+  },
+  mid:{
+    vocab:[
+      {q:"The meeting was _____ due to the holiday.",ch:["postponed","posted","proposed","processed"],ans:0,ex:"postpone = 延後、推遲。因為假日所以延後開會。",words:[{w:"postponed",m:"延後"},{w:"due to",m:"由於"}]},
+      {q:"She made a _____ to reduce sugar in her diet.",ch:["decision","division","revision","provision"],ans:0,ex:"make a decision = 做決定，決定減少飲食中的糖分。",words:[{w:"reduce",m:"減少"},{w:"diet",m:"飲食"}]},
+      {q:"The company _____ a 10% profit increase this year.",ch:["reported","reputed","repeated","replaced"],ans:0,ex:"report a profit increase = 報告利潤增長。",words:[{w:"profit",m:"利潤"},{w:"increase",m:"增加"}]},
+      {q:"Please _____ your seat until the seatbelt sign is off.",ch:["remain in","remove from","repair at","return to"],ans:0,ex:"remain in your seat = 留在座位上，飛機廣播常用語。",words:[{w:"remain",m:"保持、留在"},{w:"seatbelt",m:"安全帶"}]},
+      {q:"He was _____ for his outstanding performance.",ch:["recognized","reorganized","resized","realized"],ans:0,ex:"be recognized for = 因…被認可/表揚。",words:[{w:"outstanding",m:"傑出的"},{w:"performance",m:"表現"}]}
+    ],
+    grammar:[
+      {q:"By the time she arrived, the meeting _____.",ch:["had already started","already started","has already started","is already starting"],ans:0,ex:"過去完成式（had + p.p.）：在她到達之前，會議已經開始了。",words:[{w:"by the time",m:"在…之前"},{w:"arrive",m:"到達"}]},
+      {q:"_____ he studied hard, he failed the exam.",ch:["Although","Because","Since","Unless"],ans:0,ex:"Although（雖然）引導讓步子句，表示「雖然他用功讀書，卻失敗了」。",words:[{w:"although",m:"雖然"},{w:"fail",m:"失敗"}]},
+      {q:"The project _____ by the team next week.",ch:["will be completed","will complete","is completing","completes"],ans:0,ex:"未來被動式：will be + p.p.，「專案將被團隊完成」。",words:[{w:"project",m:"專案"},{w:"complete",m:"完成"}]},
+      {q:"She asked me _____ the report was ready.",ch:["whether","weather","wither","rather"],ans:0,ex:"whether 引導間接疑問句（是否），weather 是天氣，注意拼法。",words:[{w:"report",m:"報告"},{w:"ready",m:"準備好"}]},
+      {q:"Not only _____ late, but he also forgot his ID.",ch:["was he","he was","is he","he is"],ans:0,ex:"Not only 置句首時，主詞與助動詞倒裝：Not only was he late...。",words:[{w:"forget",m:"忘記"},{w:"ID",m:"身份證"}]}
+    ],
+    reading:[
+      {q:"Email: Dear Team, Due to the upcoming system upgrade, all employees must back up their files by Friday. IT support will be available from 9 AM to 5 PM.\n\nWhat must employees do before the upgrade?",ch:["Install new software","Back up their files","Contact IT support","Submit a report"],ans:1,ex:"must back up their files = 必須備份檔案。due to the upcoming upgrade = 由於即將進行的升級。",words:[{w:"upcoming",m:"即將到來的"},{w:"back up",m:"備份"},{w:"available",m:"可用的"}]}
+    ]
+  },
+  hard:{
+    vocab:[
+      {q:"The board's decision to _____ the merger was met with shareholder resistance.",ch:["ratify","rectify","rattle","ravage"],ans:0,ex:"ratify = 批准（正式通過）。ratify the merger = 批准合併。",words:[{w:"merger",m:"合併"},{w:"shareholder",m:"股東"},{w:"resistance",m:"抵制"}]},
+      {q:"Her _____ approach to problem-solving impressed the entire department.",ch:["pragmatic","dramatic","systematic","diplomatic"],ans:0,ex:"pragmatic = 務實的，強調實際解決問題而非理論。",words:[{w:"approach",m:"方法；態度"},{w:"impress",m:"使印象深刻"}]},
+      {q:"The quarterly results _____ the analyst's forecasts by a wide margin.",ch:["surpassed","suppressed","surveyed","sustained"],ans:0,ex:"surpass = 超越，超過預測。by a wide margin = 大幅超過。",words:[{w:"quarterly",m:"每季度的"},{w:"forecast",m:"預測"},{w:"margin",m:"差距"}]},
+      {q:"The CEO made a _____ statement, avoiding any direct answers.",ch:["non-committal","non-negotiable","non-sequential","non-essential"],ans:0,ex:"non-committal = 不表態的、含糊的，避免做出承諾的說法。",words:[{w:"statement",m:"聲明"},{w:"avoid",m:"避免"}]},
+      {q:"The new policy will _____ take effect at the beginning of the fiscal year.",ch:["officially","casually","marginally","tentatively"],ans:0,ex:"officially take effect = 正式生效。fiscal year = 財政年度。",words:[{w:"fiscal",m:"財政的"},{w:"effect",m:"效力"}]}
+    ],
+    grammar:[
+      {q:"Had the company invested earlier, it _____ a market leader by now.",ch:["would have become","will become","would become","had become"],ans:0,ex:"與過去事實相反的假設（第三條件句）：Had + p.p. ... would have + p.p.。",words:[{w:"invest",m:"投資"},{w:"market leader",m:"市場領導者"}]},
+      {q:"_____ with strong credentials, the applicant was immediately shortlisted.",ch:["Equipped","Equipment","To equip","Having equipped"],ans:0,ex:"分詞片語作狀語，主詞（申請人）是被動的，用過去分詞 Equipped。",words:[{w:"credentials",m:"資歷"},{w:"shortlist",m:"列入候選"}]},
+      {q:"The more effort you put in, _____ you will achieve.",ch:["the more","more","the most","most"],ans:0,ex:"the more...the more... 句型，表示「越…就越…」。",words:[{w:"effort",m:"努力"},{w:"achieve",m:"達成"}]},
+      {q:"The director insisted that the new policy _____ immediately.",ch:["be implemented","is implemented","was implemented","implement"],ans:0,ex:"insist that + 子句使用假設語氣（仮定法），動詞用原形：be implemented。",words:[{w:"implement",m:"執行、實施"},{w:"insist",m:"堅持"}]},
+      {q:"Rarely _____ such dedication in a new employee.",ch:["have we seen","we have seen","we saw","did we see"],ans:0,ex:"Rarely 置句首，主詞與助動詞倒裝：Rarely have we seen...。",words:[{w:"rarely",m:"鮮少"},{w:"dedication",m:"奉獻精神"}]}
+    ],
+    reading:[
+      {q:"Report excerpt: Despite robust Q3 earnings, the board expressed concern over increasing operational costs and suggested that management devise a cost-containment strategy before the annual review.\n\nWhat did the board suggest?",ch:["Increase earnings","Create a cost-control plan","Delay the annual review","Hire more managers"],ans:1,ex:"devise a cost-containment strategy = 制定成本控制策略。despite = 儘管，earnings = 收益。",words:[{w:"robust",m:"強勁的"},{w:"operational",m:"營運的"},{w:"devise",m:"制定"}]}
+    ]
+  }
+},
+travel:{
+  easy:{
+    vocab:[
+      {q:"Please proceed to _____ B12 for boarding.",ch:["gate","door","exit","hall"],ans:0,ex:"gate = 登機門，機場常見術語。proceed to = 前往。",words:[{w:"proceed",m:"前往；繼續"},{w:"boarding",m:"登機"}]},
+      {q:"Please fasten your _____ during takeoff.",ch:["seatbelt","luggage","ticket","passport"],ans:0,ex:"fasten your seatbelt = 繫緊安全帶，飛機起飛前廣播必說。",words:[{w:"fasten",m:"繫緊"},{w:"takeoff",m:"起飛"}]},
+      {q:"Do you have anything to _____?",ch:["declare","decorate","decrease","decide"],ans:0,ex:"Do you have anything to declare? = 有東西要申報嗎？（海關問句）",words:[{w:"declare",m:"申報"},{w:"customs",m:"海關"}]},
+      {q:"My _____ arrives at 9 PM.",ch:["flight","fight","fright","slight"],ans:0,ex:"flight = 班機、航班，注意與 fight（打架）區別。",words:[{w:"arrive",m:"抵達"},{w:"PM",m:"下午"}]},
+      {q:"Could I have a _____ seat, please?",ch:["window","mirror","glass","view"],ans:0,ex:"window seat = 靠窗座位；aisle seat = 靠走道座位。",words:[{w:"seat",m:"座位"},{w:"aisle",m:"走道"}]}
+    ],
+    grammar:[
+      {q:"The flight to Tokyo _____ at 10 AM tomorrow.",ch:["departs","departed","has departed","departing"],ans:0,ex:"固定時刻表用現在簡單式：The flight departs at 10 AM（排定出發）。",words:[{w:"depart",m:"出發"},{w:"tomorrow",m:"明天"}]},
+      {q:"Passengers _____ requested to board in groups.",ch:["are","is","be","were"],ans:0,ex:"Passengers（複數）+ are（被動現在式）= 乘客們被要求...。",words:[{w:"passenger",m:"乘客"},{w:"board",m:"登機"}]},
+    ],
+    reading:[
+      {q:"Announcement: Due to adverse weather, Flight BR123 has been delayed by two hours. Passengers should remain in the terminal. Updates will be provided every 30 minutes.\n\nWhy was the flight delayed?",ch:["Technical issue","Weather conditions","Staff shortage","Customs check"],ans:1,ex:"adverse weather = 惡劣天氣。remain in the terminal = 留在航廈內。",words:[{w:"adverse",m:"惡劣的"},{w:"remain",m:"留在"},{w:"terminal",m:"航廈"}]}
+    ]
+  },
+  mid:{
+    vocab:[
+      {q:"The airline _____ compensation for the 12-hour delay.",ch:["offered","ordered","operated","opposed"],ans:0,ex:"offer compensation = 提供補償，延誤12小時的補償說法。",words:[{w:"compensation",m:"補償"},{w:"delay",m:"延誤"}]},
+      {q:"Your baggage _____ has exceeded the limit.",ch:["allowance","alliance","assignment","allotment"],ans:0,ex:"baggage allowance = 行李限額，超過限制要付超重費。",words:[{w:"exceed",m:"超過"},{w:"limit",m:"限制"}]},
+      {q:"The hotel offers a complimentary _____ to the airport.",ch:["shuttle","shelter","shutter","scatter"],ans:0,ex:"shuttle = 接駁車。complimentary shuttle = 免費接駁服務。",words:[{w:"complimentary",m:"免費的"},{w:"offer",m:"提供"}]},
+    ],
+    grammar:[],
+    reading:[
+      {q:"Hotel policy: Check-in time is 3:00 PM. Early check-in is subject to availability and may incur an additional fee. Late check-out requests must be submitted by 10:00 AM on the day of departure.\n\nWhen must late check-out be requested?",ch:["3 PM on arrival","By 10 AM on departure day","During check-in","Anytime"],ans:1,ex:"must be submitted by 10 AM on the day of departure = 退房當天上午10點前提出。",words:[{w:"subject to",m:"視…而定"},{w:"incur",m:"產生（費用）"},{w:"departure",m:"離開"}]}
+    ]
+  },
+  hard:{
+    vocab:[
+      {q:"The airline's _____ policy allows one carry-on and one personal item.",ch:["carry-on","cabin baggage","hand luggage allowance","overhead locker"],ans:2,ex:"hand luggage allowance = 手提行李限額，是正式政策用語。",words:[{w:"allowance",m:"配額、限額"},{w:"personal item",m:"個人物品"}]},
+    ],
+    grammar:[
+      {q:"Not until the plane landed _____ the passengers able to turn on their phones.",ch:["were","are","did","was"],ans:0,ex:"Not until 置句首倒裝：Not until + clause + were + subject + adjective。",words:[{w:"land",m:"降落"},{w:"turn on",m:"開啟"}]}
+    ],
+    reading:[
+      {q:"Itinerary note: The pre-departure lounge is exclusively accessible to business and first-class passengers holding same-day boarding passes. Premium members of affiliated airlines may access the lounge upon presenting valid membership cards.\n\nWho can access the lounge?",ch:["All passengers","Economy class only","Business/first class + premium members","Staff only"],ans:2,ex:"exclusively accessible to business and first-class passengers = 僅限商務/頭等艙；Premium members = 合作航空貴賓會員。",words:[{w:"exclusively",m:"僅限"},{w:"affiliated",m:"合作的"},{w:"valid",m:"有效的"}]}
+    ]
+  }
+},
+biz:{
+  easy:{
+    vocab:[
+      {q:"Please _____ the report by Friday.",ch:["submit","summit","summon","support"],ans:0,ex:"submit a report = 提交報告，職場基本用語。",words:[{w:"report",m:"報告"},{w:"by Friday",m:"在週五之前"}]},
+      {q:"The meeting is _____ for 3 PM.",ch:["scheduled","schooled","scaled","selected"],ans:0,ex:"be scheduled for = 排定在…，meeting is scheduled for 3 PM = 會議排在下午三點。",words:[{w:"meeting",m:"會議"},{w:"scheduled",m:"安排好的"}]},
+      {q:"I will _____ you tomorrow morning.",ch:["contact","count","confirm","contain"],ans:0,ex:"contact you = 聯繫你，職場常見說法。",words:[{w:"tomorrow",m:"明天"},{w:"morning",m:"早上"}]},
+    ],
+    grammar:[
+      {q:"The manager _____ the new policy yesterday.",ch:["announced","announce","announces","announcing"],ans:0,ex:"yesterday（昨天）→ 過去式，announce → announced。",words:[{w:"manager",m:"主管"},{w:"policy",m:"政策"}]},
+    ],
+    reading:[
+      {q:"Memo: All staff are reminded to complete the online safety training by the end of this month. Failure to do so may result in restricted access to the system.\n\nWhat happens if staff don't complete the training?",ch:["They get a bonus","System access may be restricted","They must attend a class","They will be fired"],ans:1,ex:"failure to do so = 未完成的話，restricted access = 限制使用系統。",words:[{w:"remind",m:"提醒"},{w:"restricted",m:"受限的"},{w:"failure",m:"失敗、未能"}]}
+    ]
+  },
+  mid:{
+    vocab:[
+      {q:"We need to _____ a solution before the client meeting.",ch:["finalize","fertilize","formalize","familiarize"],ans:0,ex:"finalize a solution = 敲定/確定解決方案，職場常用詞。",words:[{w:"solution",m:"解決方案"},{w:"client",m:"客戶"}]},
+      {q:"The proposal was well-received by the _____.",ch:["stakeholders","stockholders","shareholders","all are possible"],ans:3,ex:"stakeholders（利益相關者）、stockholders/shareholders（股東）都是正確說法，視情境而定。",words:[{w:"proposal",m:"提案"},{w:"well-received",m:"受歡迎的"}]},
+      {q:"Please _____ this document before signing.",ch:["review","revise","renew","reveal"],ans:0,ex:"review a document = 審閱文件，signing（簽名）前要先閱讀。",words:[{w:"document",m:"文件"},{w:"sign",m:"簽名"}]},
+    ],
+    grammar:[
+      {q:"The new system _____ by the IT team last week.",ch:["was installed","installed","has installed","installing"],ans:0,ex:"上週（last week）被動式過去式：was + p.p.（installed）。",words:[{w:"install",m:"安裝"},{w:"IT team",m:"資訊部門"}]},
+      {q:"Could you _____ me the updated figures by noon?",ch:["send","sends","sent","sending"],ans:0,ex:"Could you + 動詞原形 = 請問你能…？禮貌請求句型。",words:[{w:"updated",m:"最新的"},{w:"figure",m:"數字"},{w:"noon",m:"正午"}]},
+    ],
+    reading:[
+      {q:"The quarterly earnings report shows a 15% revenue increase compared to the same period last year. However, operating expenses also rose by 20%, resulting in a narrower profit margin.\n\nWhat is the main concern mentioned in the report?",ch:["Revenue decreased","Expenses rose more than revenue","Profit margin widened","Sales targets were not met"],ans:1,ex:"operating expenses rose 20% vs revenue 15% → expenses grew faster → profit margin narrowed（利潤空間縮小）。",words:[{w:"quarterly",m:"每季的"},{w:"operating expenses",m:"營運費用"},{w:"profit margin",m:"利潤空間"}]}
+    ]
+  },
+  hard:{
+    vocab:[
+      {q:"The acquisition will be _____ pending regulatory approval.",ch:["finalized","forecasted","facilitated","franchised"],ans:0,ex:"finalized pending approval = 待監管機構批准後完成收購。pending = 等待期間。",words:[{w:"acquisition",m:"收購"},{w:"regulatory",m:"監管的"},{w:"pending",m:"待…期間"}]},
+      {q:"To remain competitive, the firm must _____ its core competencies.",ch:["leverage","lessen","lengthen","lapse"],ans:0,ex:"leverage core competencies = 善用核心能力，商業策略常見詞彙。",words:[{w:"competitive",m:"有競爭力的"},{w:"core competency",m:"核心能力"}]},
+    ],
+    grammar:[
+      {q:"The figures, _____ presented to the board last quarter, have since been revised.",ch:["which were","that was","who were","what were"],ans:0,ex:"非限定性關係子句用 which（逗號後），figures 是事物，且是複數故用 were。",words:[{w:"figures",m:"數據"},{w:"revised",m:"修訂的"}]},
+    ],
+    reading:[
+      {q:"Investor briefing: While the domestic market has shown signs of saturation, international expansion remains a viable avenue for growth. Management is exploring strategic partnerships in Southeast Asia, with pilot programs expected to launch in Q2.\n\nWhat is management's growth strategy?",ch:["Cut domestic operations","Expand internationally via partnerships","Launch new domestic products","Reduce headcount"],ans:1,ex:"international expansion via strategic partnerships = 通過戰略合作夥伴進行國際擴張。Southeast Asia pilot programs = 東南亞試點計畫。",words:[{w:"saturation",m:"飽和"},{w:"viable",m:"可行的"},{w:"partnership",m:"夥伴關係"}]}
+    ]
+  }
+},
+food:{
+  easy:{
+    vocab:[
+      {q:"Could I see the _____, please?",ch:["menu","memo","medal","media"],ans:0,ex:"Could I see the menu? = 可以給我菜單嗎？餐廳基本用語。",words:[{w:"menu",m:"菜單"},{w:"please",m:"請（禮貌用語）"}]},
+      {q:"I'd like to _____ a table for two.",ch:["reserve","reverse","revise","restore"],ans:0,ex:"reserve a table = 訂位（餐廳）；reserve = 預訂、保留。",words:[{w:"table",m:"桌子"},{w:"for two",m:"兩人"}]},
+      {q:"The soup is too _____ for me.",ch:["spicy","spicy-hot","peppered","burning"],ans:0,ex:"spicy = 辣的，形容食物口味常用詞。",words:[{w:"soup",m:"湯"},{w:"too",m:"太...了"}]},
+      {q:"May I take your _____ now?",ch:["order","offer","option","opinion"],ans:0,ex:"May I take your order? = 可以幫您點餐了嗎？侍者常說。",words:[{w:"order",m:"點餐；命令"},{w:"take",m:"記下"}]},
+    ],
+    grammar:[],
+    reading:[
+      {q:"Sign: This restaurant operates on a first-come, first-served basis. Reservations are not accepted. Opening hours: 11 AM – 9 PM daily.\n\nHow does this restaurant handle customers?",ch:["By reservation only","First come, first served","By appointment","Online booking only"],ans:1,ex:"first-come, first-served = 先到先得，不接受預約（reservations are not accepted）。",words:[{w:"operate",m:"運作"},{w:"reservation",m:"預約"},{w:"basis",m:"原則"}]}
+    ]
+  },
+  mid:{
+    vocab:[
+      {q:"The restaurant is known for its _____ cuisine.",ch:["signature","signal","similar","slight"],ans:0,ex:"signature cuisine = 招牌料理，signature = 獨特的、標誌性的。",words:[{w:"cuisine",m:"料理；烹飪"},{w:"known for",m:"以…著名"}]},
+      {q:"Could you _____ the bill, please?",ch:["split","spit","spin","spoil"],ans:0,ex:"split the bill = 分開付帳（AA制），餐廳常見說法。",words:[{w:"bill",m:"帳單"},{w:"could you",m:"能否請你"}]},
+    ],
+    grammar:[],
+    reading:[
+      {q:"Review: The service was impeccable and the ambiance was cozy. However, the portion sizes were smaller than expected for the price point, which left some diners feeling unsatisfied.\n\nWhat was the main criticism in the review?",ch:["Poor service","Small portions relative to price","Bad atmosphere","Slow delivery"],ans:1,ex:"portion sizes were smaller than expected for the price = 以那個價格來說份量偏少。impeccable = 無可挑剔的。",words:[{w:"impeccable",m:"無可挑剔的"},{w:"ambiance",m:"氛圍"},{w:"portion",m:"份量"}]}
+    ]
+  },
+  hard:{
+    vocab:[
+      {q:"The chef sources only _____ ingredients from local farms.",ch:["seasonal","ceremonial","sensational","sequential"],ans:0,ex:"seasonal ingredients = 當季食材。source from = 從…採購。",words:[{w:"ingredient",m:"食材"},{w:"source",m:"採購；來源"}]},
+    ],
+    grammar:[],
+    reading:[
+      {q:"Policy: Customers who pre-order three or more days in advance are eligible for a 10% discount. Cancellations made within 24 hours of the reservation will incur a 50% cancellation fee.\n\nA customer cancels their reservation 6 hours before arrival. What fee applies?",ch:["No fee","10% discount","50% cancellation fee","Full refund"],ans:2,ex:"within 24 hours → 50% cancellation fee。6 hours before = 24小時內，所以收取50%取消費。",words:[{w:"eligible",m:"符合資格的"},{w:"cancellation",m:"取消"},{w:"incur",m:"產生"}]}
+    ]
+  }
+},
+medical:{
+  easy:{
+    vocab:[
+      {q:"I have a _____ and a sore throat.",ch:["fever","flavor","favor","lever"],ans:0,ex:"fever = 發燒，sore throat = 喉嚨痛，感冒常見症狀。",words:[{w:"sore throat",m:"喉嚨痛"},{w:"fever",m:"發燒"}]},
+      {q:"You should take this _____ three times a day.",ch:["medicine","medium","median","media"],ans:0,ex:"take medicine = 吃藥，three times a day = 一天三次。",words:[{w:"take",m:"服用"},{w:"three times a day",m:"一天三次"}]},
+      {q:"Please make an _____ with the doctor.",ch:["appointment","apartment","appearance","application"],ans:0,ex:"make an appointment = 預約（看診），與 apply（申請）注意區分。",words:[{w:"doctor",m:"醫生"},{w:"make",m:"安排"}]},
+    ],
+    grammar:[],
+    reading:[
+      {q:"Prescription label: Take one tablet twice daily after meals. Do not take on an empty stomach. If symptoms persist, consult your physician.\n\nWhen should this medicine be taken?",ch:["Before meals","After meals","On an empty stomach","Once a day"],ans:1,ex:"after meals = 飯後服用。Do not take on an empty stomach = 不要空腹服用。",words:[{w:"tablet",m:"藥片"},{w:"persist",m:"持續"},{w:"physician",m:"醫師"}]}
+    ]
+  },
+  mid:{
+    vocab:[
+      {q:"The patient was _____ for three days after the surgery.",ch:["hospitalized","hospitality","hospitable","hosting"],ans:0,ex:"hospitalized = 住院（動詞被動式），surgery = 手術。",words:[{w:"patient",m:"病人"},{w:"surgery",m:"手術"}]},
+      {q:"The doctor _____ antibiotics for the infection.",ch:["prescribed","presented","prevented","preserved"],ans:0,ex:"prescribe antibiotics = 開立抗生素，prescribe = 開處方。",words:[{w:"antibiotics",m:"抗生素"},{w:"infection",m:"感染"}]},
+    ],
+    grammar:[],
+    reading:[
+      {q:"Health advisory: Individuals over 65 and those with underlying conditions are strongly encouraged to receive the annual flu vaccination. Clinics offering the vaccine are open Monday through Friday, 8 AM to 5 PM.\n\nWho is this advisory primarily targeting?",ch:["All age groups","Children under 10","Elderly and high-risk groups","Healthcare workers"],ans:2,ex:"over 65 + those with underlying conditions = 高齡及有潛在疾病者 = 高風險族群。",words:[{w:"underlying",m:"潛在的"},{w:"vaccination",m:"疫苗接種"},{w:"advisory",m:"公告；建議"}]}
+    ]
+  },
+  hard:{
+    vocab:[
+      {q:"The new drug showed _____ results in reducing inflammation.",ch:["promising","prompting","proposing","providing"],ans:0,ex:"promising results = 有前途的/令人期待的結果，inflammation = 發炎。",words:[{w:"inflammation",m:"發炎"},{w:"promising",m:"有前景的"}]},
+    ],
+    grammar:[],
+    reading:[
+      {q:"Clinical trial report: The experimental compound demonstrated a statistically significant reduction in LDL cholesterol levels among participants with hyperlipidemia, with minimal reported adverse effects over the 12-week observation period.\n\nWhat was the main finding?",ch:["Drug caused side effects","LDL levels significantly reduced","HDL levels increased","Trial was inconclusive"],ans:1,ex:"statistically significant reduction in LDL = LDL顯著降低。minimal adverse effects = 副作用極少。",words:[{w:"compound",m:"化合物"},{w:"hyperlipidemia",m:"高血脂症"},{w:"adverse",m:"不良的"}]}
+    ]
+  }
+},
+school:{
+  easy:{
+    vocab:[
+      {q:"The homework is _____ tomorrow.",ch:["due","dew","do","done"],ans:0,ex:"due = 到期的、應繳交的。The homework is due tomorrow = 作業明天要交。",words:[{w:"homework",m:"家庭作業"},{w:"tomorrow",m:"明天"}]},
+      {q:"She received a scholarship to study _____.",ch:["abroad","aboard","about","abrupt"],ans:0,ex:"study abroad = 出國讀書，scholarship = 獎學金。",words:[{w:"scholarship",m:"獎學金"},{w:"receive",m:"收到"}]},
+      {q:"The professor _____ the lecture notes online.",ch:["posted","hosted","costed","boasted"],ans:0,ex:"post notes online = 把筆記發布到網路上。",words:[{w:"lecture",m:"講課"},{w:"notes",m:"筆記"}]},
+    ],
+    grammar:[],
+    reading:[
+      {q:"Announcement: The school library will extend its opening hours during exam week. It will be open from 7 AM to midnight from Monday through Saturday.\n\nWhat change is being made during exam week?",ch:["Library will be closed","Hours are extended","Only students can enter","New books will arrive"],ans:1,ex:"extend its opening hours = 延長開放時間。from 7 AM to midnight = 從早上7點到午夜。",words:[{w:"extend",m:"延長"},{w:"midnight",m:"午夜"},{w:"exam",m:"考試"}]}
+    ]
+  },
+  mid:{
+    vocab:[
+      {q:"Students must _____ their thesis by the end of the semester.",ch:["defend","defeat","defer","define"],ans:0,ex:"defend a thesis = 論文口試/答辯，學術用語。",words:[{w:"thesis",m:"論文"},{w:"semester",m:"學期"}]},
+      {q:"The course requires students to _____ peer evaluations.",ch:["conduct","conflict","contact","contrast"],ans:0,ex:"conduct peer evaluations = 進行同儕評量，conduct = 執行、進行。",words:[{w:"peer",m:"同儕"},{w:"evaluation",m:"評量"}]},
+    ],
+    grammar:[],
+    reading:[
+      {q:"Syllabus note: Attendance accounts for 10% of the final grade. Students who miss more than three classes without a valid excuse will have their grade deducted accordingly.\n\nWhat happens if a student misses more than 3 classes?",ch:["They fail automatically","Grade is deducted","Extra assignments required","They must retake the course"],ans:1,ex:"grade deducted accordingly = 依情況扣分。valid excuse = 正當理由。",words:[{w:"syllabus",m:"課程大綱"},{w:"attendance",m:"出席"},{w:"deduct",m:"扣除"}]}
+    ]
+  },
+  hard:{
+    vocab:[
+      {q:"The university's curriculum was _____ to meet industry demands.",ch:["revamped","revoked","revered","reversed"],ans:0,ex:"revamp = 徹底改革、翻新。revamp curriculum = 重新設計課程架構。",words:[{w:"curriculum",m:"課程"},{w:"industry demands",m:"產業需求"}]},
+    ],
+    grammar:[],
+    reading:[
+      {q:"Academic policy: Plagiarism, defined as the uncited use of another's intellectual work, constitutes a serious violation of academic integrity. Students found guilty may face penalties ranging from a failing grade to expulsion.\n\nWhat is the most severe consequence of plagiarism?",ch:["Warning letter","Reduced grade","Expulsion","Mandatory workshop"],ans:2,ex:"penalties ranging from failing grade to expulsion = 最嚴重是被開除（expulsion）。plagiarism = 抄襲。",words:[{w:"plagiarism",m:"抄襲"},{w:"expulsion",m:"開除"},{w:"integrity",m:"誠信"}]}
+    ]
+  }
+}
+};
+
+// ===== WORD DATA FOR GAMES =====
+const gameWords=[
+  {w:"submit",m:"提交",p:"səbˈmɪt"},{w:"schedule",m:"行程表",p:"ˈskɛdʒuːl"},{w:"deadline",m:"截止日期",p:"ˈdɛdlaɪn"},
+  {w:"confirm",m:"確認",p:"kənˈfɜːrm"},{w:"proceed",m:"前往",p:"prəˈsiːd"},{w:"depart",m:"出發",p:"dɪˈpɑːrt"},
+  {w:"fasten",m:"繫緊",p:"ˈfæsən"},{w:"declare",m:"申報",p:"dɪˈklɛr"},{w:"reserved",m:"預約的",p:"rɪˈzɜːrvd"},
+  {w:"recommend",m:"推薦",p:"ˌrɛkəˈmɛnd"},{w:"available",m:"可用的",p:"əˈveɪləbl"},{w:"appointment",m:"預約",p:"əˈpɔɪntmənt"},
+  {w:"medication",m:"藥物",p:"ˌmɛdɪˈkeɪʃən"},{w:"fever",m:"發燒",p:"ˈfiːvər"},{w:"symptom",m:"症狀",p:"ˈsɪmptəm"},
+  {w:"lecture",m:"講課",p:"ˈlɛktʃər"},{w:"scholarship",m:"獎學金",p:"ˈskɒlərʃɪp"},{w:"curriculum",m:"課程",p:"kəˈrɪkjʊləm"},
+  {w:"purchase",m:"購買",p:"ˈpɜːrtʃəs"},{w:"discount",m:"折扣",p:"ˈdɪskaʊnt"}
+];
+
+// ===== DAILY SENTENCES =====
+const dailySents=[
+  {en:"Could you please speak more slowly?",zh:"你能說慢一點嗎？"},
+  {en:"I'd like to check in for my flight to Tokyo.",zh:"我想辦理前往東京的登機手續。"},
+  {en:"Excuse me, where is the nearest convenience store?",zh:"請問最近的便利商店在哪裡？"},
+  {en:"I'm looking forward to working with you.",zh:"我很期待與您合作。"},
+  {en:"Could I have the menu, please?",zh:"請給我菜單好嗎？"},
+  {en:"The meeting has been rescheduled to next Monday.",zh:"會議已改期至下週一。"},
+  {en:"Would you prefer a window or aisle seat?",zh:"您要靠窗還是靠走道的座位？"},
+  {en:"Please fasten your seatbelt during takeoff.",zh:"起飛時請繫好安全帶。"},
+  {en:"I need to submit the report by Friday.",zh:"我需要在星期五前交出報告。"},
+  {en:"Could you recommend a good restaurant nearby?",zh:"您能推薦附近好的餐廳嗎？"},
+  {en:"The pharmacy closes at 9 PM on weekdays.",zh:"藥局平日晚上九點關門。"},
+  {en:"Please make sure to read the instructions carefully.",zh:"請確保仔細閱讀說明書。"},
+  {en:"Your total comes to five hundred dollars.",zh:"您的總金額是五百元。"},
+  {en:"I have a doctor's appointment this afternoon.",zh:"我今天下午有看診的預約。"},
+  {en:"Don't forget to bring your student ID card.",zh:"別忘了帶你的學生證。"},
+  {en:"Can I get a refund for this item?",zh:"這件商品我可以退款嗎？"},
+  {en:"The train arrives at platform three.",zh:"火車到達第三月台。"},
+  {en:"I'd like to open a bank account.",zh:"我想要開一個銀行帳戶。"},
+  {en:"Please fill out this form completely.",zh:"請完整填寫這份表格。"},
+  {en:"The project deadline has been extended by one week.",zh:"專案截止日期延後了一週。"}
+];
+
+// ======= UTILS =======
+function spk(t,rate=0.85){
+  if(!t) return;
+  const u=new SpeechSynthesisUtterance(t);
+  u.lang='en-US'; u.rate=rate;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+function copyText(t){ navigator.clipboard.writeText(t).then(()=>alert('已複製：'+t)).catch(()=>{}); }
+function saveDB(){ localStorage.setItem(WB_KEY,JSON.stringify(wordbook)); localStorage.setItem(STAT_KEY,JSON.stringify(stat)); }
+function saveToWB(){
+  if(!selWord) return;
+  if(wordbook.find(w=>w.word===selWord)){ alert('此單字已在單字本中'); return; }
+  wordbook.push({word:selWord,detail:selWordData.meaning||'',pos:selWordData.pos||'',saved:new Date().toLocaleDateString('zh-TW')});
+  saveDB(); alert('✅ 已加入單字本：'+selWord);
+}
+function saveToWBWord(w,d){
+  if(!w) return;
+  if(wordbook.find(x=>x.word===w)){ alert('此單字已在單字本中'); return; }
+  wordbook.push({word:w,detail:d,saved:new Date().toLocaleDateString('zh-TW')});
+  saveDB(); alert('✅ 已加入單字本：'+w);
+}
+
+// ======= NAV =======
+document.getElementById('nav').querySelectorAll('.nav-item').forEach(el=>{
+  el.onclick=()=>{
+    document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('on'));
+    document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+    el.classList.add('on');
+    document.getElementById('pane-'+el.dataset.tab).classList.add('on');
+    if(el.dataset.tab==='wb') renderWB();
+    if(el.dataset.tab==='stats') renderStats();
+    if(el.dataset.tab==='games') initGame();
+    if(el.dataset.tab==='daily') loadDaily();
+  };
+});
+
+// ======= OCR =======
+document.getElementById('fi').onchange=e=>handleFile(e.target.files[0]);
+document.addEventListener('paste',e=>{
+  const items=e.clipboardData?.items;
+  if(!items) return;
+  for(const item of items){ if(item.type.startsWith('image/')){ handleFile(item.getAsFile()); break; } }
+});
+const uz=document.getElementById('uploadZone');
+uz.ondragover=e=>{e.preventDefault();uz.style.borderColor='var(--primary)';};
+uz.ondragleave=()=>{uz.style.borderColor='';};
+uz.ondrop=e=>{e.preventDefault();uz.style.borderColor='';handleFile(e.dataTransfer.files[0]);};
+
+function handleFile(file){
+  if(!file||!file.type.startsWith('image/')) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const b64=e.target.result.split(',')[1];
+    analyzeOCR(b64, file.type);
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analyzeOCR(b64,mt){
+  document.getElementById('ocrLoading').classList.remove('hidden');
+  document.getElementById('ocrResult').classList.add('hidden');
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:mt,data:b64}},
+        {type:'text',text:`分析截圖中的英文，回傳JSON：{"sentence":"完整英文句子","translation":"繁體中文翻譯","words":[{"word":"單字","pos":"詞性n./v./adj./adv.","meaning":"繁體中文意思","pronunciation":"音標","forms":"動詞三態(非動詞省略)","example":"英文例句"}]}。只回傳JSON，不含markdown。`}
+      ]}]})
+    });
+    const data=await r.json();
+    const txt=data.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
+    showOCR(JSON.parse(txt));
+  }catch(e){ alert('解析失敗，請確認圖片含英文文字。'); }
+  document.getElementById('ocrLoading').classList.add('hidden');
+}
+
+function showOCR(d){
+  document.getElementById('ocrRaw').textContent=d.sentence||'';
+  document.getElementById('ocrTrans').textContent=d.translation||'';
+  const chips=document.getElementById('ocrChips');
+  chips.innerHTML='';
+  (d.words||[]).forEach(w=>{
+    const c=document.createElement('div');
+    c.className='chip';c.textContent=w.word;
+    c.onclick=()=>showWordBox(w);
+    chips.appendChild(c);
+  });
+  document.getElementById('ocrResult').classList.remove('hidden');
+  document.getElementById('ocrWordBox').classList.add('hidden');
+}
+
+function showWordBox(w){
+  selWord=w.word; selWordData=w;
+  document.getElementById('ocrWHead').textContent=w.word+(w.pronunciation?' / '+w.pronunciation:'');
+  let b=`<div>📖 ${w.pos} ${w.meaning}</div>`;
+  if(w.forms) b+=`<div>🔄 三態：${w.forms}</div>`;
+  if(w.example) b+=`<div>💡 ${w.example}</div>`;
+  document.getElementById('ocrWBody').innerHTML=b;
+  document.getElementById('ocrWordBox').classList.remove('hidden');
+}
+
+// ======= QUIZ =======
+function getQList(){
+  const bank=QB[quizCat]?.[quizDiff]?.[quizType];
+  if(bank&&bank.length) return bank;
+  // fallback
+  for(const cat of Object.keys(QB)){
+    const b=QB[cat]?.[quizDiff]?.[quizType];
+    if(b&&b.length) return b;
+  }
+  return QB.daily.easy.vocab;
+}
+
+function loadQ(){
+  const list=getQList();
+  const q=list[quizIdx%list.length];
+  quizAnswered=false;
+  const catNames={daily:'日常生活',travel:'搭機/旅遊',biz:'職場/商務',food:'餐廳/購物',medical:'醫療/健康',school:'學校/教育'};
+  const diffNames={easy:'⭐ 簡單',mid:'⭐⭐ 普通',hard:'⭐⭐⭐ 困難'};
+  const typeNames={vocab:'單字',grammar:'語彙',reading:'閱讀'};
+  document.getElementById('quizTagCat').textContent=catNames[quizCat];
+  document.getElementById('quizTagDiff').textContent=diffNames[quizDiff];
+  document.getElementById('quizTagType').textContent=typeNames[quizType];
+  document.getElementById('quizCount').textContent=(quizIdx%list.length+1)+'/'+list.length;
+  document.getElementById('quizProg').style.width=((quizIdx%list.length+1)/list.length*100)+'%';
+  document.getElementById('quizQ').textContent=q.q;
+  document.getElementById('quizExplain').classList.add('hidden');
+  const wc=document.getElementById('quizWordChips'); wc.innerHTML='';
+  const opts=document.getElementById('quizOpts'); opts.innerHTML='';
+  q.ch.forEach((c,i)=>{
+    const b=document.createElement('button');b.className='opt';
+    b.textContent=String.fromCharCode(65+i)+'. '+c;
+    b.onclick=()=>answerQ(i,q.ans,q.ex,q.words,list.length);
+    opts.appendChild(b);
+  });
+}
+
+function answerQ(chosen,correct,ex,words,total){
+  if(quizAnswered) return;
+  quizAnswered=true;
+  stat.quiz++; if(chosen===correct) stat.correct++;
+  if(!stat.cats[quizCat]) stat.cats[quizCat]={total:0,correct:0};
+  stat.cats[quizCat].total++; if(chosen===correct) stat.cats[quizCat].correct++;
+  saveDB();
+  const opts=document.getElementById('quizOpts').children;
+  opts[correct].classList.add('ok');
+  if(chosen!==correct) opts[chosen].classList.add('ng');
+  const ex2=document.getElementById('quizExplain');
+  ex2.textContent=ex; ex2.classList.remove('hidden');
+  const wc=document.getElementById('quizWordChips');
+  (words||[]).forEach(wo=>{
+    const c=document.createElement('div');c.className='chip';
+    c.textContent=wo.w;
+    c.onclick=()=>{c.textContent=c.textContent===wo.w?wo.w+' = '+wo.m:wo.w;};
+    wc.appendChild(c);
+  });
+}
+
+function nextQ(){ quizIdx++; loadQ(); }
+
+// Tab handlers
+document.getElementById('quizCats').querySelectorAll('.ctab').forEach(el=>{
+  el.onclick=()=>{
+    document.getElementById('quizCats').querySelectorAll('.ctab').forEach(e=>e.classList.remove('on'));
+    el.classList.add('on'); quizCat=el.dataset.cat; quizIdx=0; loadQ();
+  };
+});
+document.getElementById('quizDiffs').querySelectorAll('.diff-tab').forEach(el=>{
+  el.onclick=()=>{
+    document.getElementById('quizDiffs').querySelectorAll('.diff-tab').forEach(e=>{e.classList.remove('on','easy','mid','hard');});
+    el.classList.add('on',el.dataset.diff); quizDiff=el.dataset.diff; quizIdx=0; loadQ();
+  };
+});
+document.getElementById('quizTypes').querySelectorAll('.ctab').forEach(el=>{
+  el.onclick=()=>{
+    document.getElementById('quizTypes').querySelectorAll('.ctab').forEach(e=>e.classList.remove('on'));
+    el.classList.add('on'); quizType=el.dataset.type; quizIdx=0; loadQ();
+  };
+});
+
+// ======= WORD GAMES =======
+let gameState={};
+
+function getWordPool(){
+  const src=document.getElementById('gameWordSrc').value;
+  if(src==='wordbook'&&wordbook.length>=4) return wordbook.map(w=>({w:w.word,m:w.detail,p:''}));
+  return gameWords;
+}
+
+function shuffle(arr){ return arr.map(v=>({v,r:Math.random()})).sort((a,b)=>a.r-b.r).map(x=>x.v); }
+
+function initGame(){
+  curGame=document.querySelector('.gtab.on').dataset.game;
+  gameScoreVal=0;
+  document.getElementById('gameScore').textContent='';
+  const pool=getWordPool();
+  const area=document.getElementById('gameArea');
+  if(curGame==='connect') buildConnect(area,pool);
+  else if(curGame==='fill') buildFill(area,pool);
+  else if(curGame==='spell') buildSpell(area,pool);
+  else if(curGame==='flash') buildFlash(area,pool);
+  else if(curGame==='whack') buildWhack(area,pool);
+  else if(curGame==='listen') buildListen(area,pool);
+}
+
+document.getElementById('gameTabs').querySelectorAll('.gtab').forEach(el=>{
+  el.onclick=()=>{
+    document.getElementById('gameTabs').querySelectorAll('.gtab').forEach(e=>e.classList.remove('on'));
+    el.classList.add('on'); initGame();
+  };
+});
+
+// ---- Connect ----
+function buildConnect(area,pool){
+  const items=shuffle(pool).slice(0,6);
+  const lefts=shuffle([...items]);
+  const rights=shuffle([...items]);
+  gameState={items,leftSel:null,rightSel:null,matched:0,total:items.length};
+  area.innerHTML=`<div style="font-size:13px;font-weight:600;margin-bottom:10px">連連看：英文配中文 <span id="connectProg" style="color:var(--primary)">0/${items.length}</span></div>
+  <div class="connect-grid">
+    <div class="connect-col" id="leftCol"></div>
+    <div class="connect-col" id="rightCol"></div>
+  </div>`;
+  const lc=document.getElementById('leftCol'),rc=document.getElementById('rightCol');
+  lefts.forEach(item=>{
+    const d=document.createElement('div');d.className='connect-item';d.textContent=item.w;d.dataset.word=item.w;d.dataset.side='left';
+    d.onclick=()=>connectClick(d,'left');lc.appendChild(d);
+  });
+  rights.forEach(item=>{
+    const d=document.createElement('div');d.className='connect-item';d.textContent=item.m;d.dataset.word=item.w;d.dataset.side='right';
+    d.onclick=()=>connectClick(d,'right');rc.appendChild(d);
+  });
+}
+
+function connectClick(el,side){
+  if(el.classList.contains('matched')) return;
+  if(side==='left'){
+    document.querySelectorAll('.connect-item[data-side=left]').forEach(e=>e.classList.remove('selected'));
+    el.classList.add('selected'); gameState.leftSel=el;
+  } else {
+    document.querySelectorAll('.connect-item[data-side=right]').forEach(e=>e.classList.remove('selected'));
+    el.classList.add('selected'); gameState.rightSel=el;
+  }
+  if(gameState.leftSel&&gameState.rightSel){
+    if(gameState.leftSel.dataset.word===gameState.rightSel.dataset.word){
+      gameState.leftSel.classList.remove('selected');gameState.rightSel.classList.remove('selected');
+      gameState.leftSel.classList.add('matched');gameState.rightSel.classList.add('matched');
+      gameState.matched++;
+      document.getElementById('connectProg').textContent=gameState.matched+'/'+gameState.total;
+      gameState.leftSel=null;gameState.rightSel=null;
+      if(gameState.matched===gameState.total){
+        setTimeout(()=>{ document.getElementById('gameScore').textContent='🎉 全部配對！重新開始？'; },300);
+      }
+    } else {
+      gameState.leftSel.classList.add('wrong');gameState.rightSel.classList.add('wrong');
+      const l=gameState.leftSel,r=gameState.rightSel;
+      setTimeout(()=>{l.classList.remove('selected','wrong');r.classList.remove('selected','wrong');},600);
+      gameState.leftSel=null;gameState.rightSel=null;
+    }
+  }
+}
+
+// ---- Fill blank ----
+const fillQs=[
+  {q:"Please ___ your report before the meeting.",blank:"review",hint:"v. 審閱"},
+  {q:"The flight will ___ at 10 AM.",blank:"depart",hint:"v. 出發"},
+  {q:"Could you ___ a good restaurant?",blank:"recommend",hint:"v. 推薦"},
+  {q:"I need to make an ___ with the doctor.",blank:"appointment",hint:"n. 預約"},
+  {q:"Please ___ your seatbelt during takeoff.",blank:"fasten",hint:"v. 繫緊"},
+  {q:"She received a ___ to study abroad.",blank:"scholarship",hint:"n. 獎學金"},
+  {q:"The contract has been ___ by both parties.",blank:"signed",hint:"v. 簽署"},
+  {q:"There is a 20% ___ on all items today.",blank:"discount",hint:"n. 折扣"},
+];
+let fillIdx=0;
+
+function buildFill(area,pool){
+  fillIdx=Math.floor(Math.random()*fillQs.length);
+  showFillQ(area);
+}
+
+function showFillQ(area){
+  const q=fillQs[fillIdx%fillQs.length];
+  const qhtml=q.q.replace('___',`<input class="fill-input" id="fillAns" placeholder="?" autocomplete="off" style="width:${q.blank.length*14+20}px">`);
+  area.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">填空題 ${fillIdx%fillQs.length+1}/${fillQs.length}</div>
+  <div style="font-size:14px;line-height:2.2">${qhtml}</div>
+  <div style="font-size:12px;color:var(--muted);margin-top:8px">提示：${q.hint}</div>
+  <div class="row" style="margin-top:12px">
+    <button class="btn pri sm" onclick="checkFill()">確認</button>
+    <button class="btn sm" onclick="spk('${q.q.replace('___',q.blank)}')">🔊 聽正確句子</button>
+    <button class="btn sm" onclick="fillIdx++;showFillQ(document.getElementById('gameArea'))">下一題 →</button>
+  </div>
+  <div id="fillResult" style="margin-top:10px;font-size:13px"></div>`;
+  setTimeout(()=>document.getElementById('fillAns')?.focus(),100);
+}
+
+function checkFill(){
+  const inp=document.getElementById('fillAns');
+  const q=fillQs[fillIdx%fillQs.length];
+  if(!inp) return;
+  const val=inp.value.trim().toLowerCase();
+  const res=document.getElementById('fillResult');
+  if(val===q.blank.toLowerCase()){
+    res.innerHTML='<span style="color:var(--success)">✅ 答對了！</span>';
+    gameScoreVal++;
+    document.getElementById('gameScore').textContent='答對 '+gameScoreVal+' 題';
+    inp.style.color='var(--success)';
+  } else {
+    res.innerHTML=`<span style="color:var(--danger)">❌ 答錯了，正確答案是：<strong>${q.blank}</strong></span>`;
+    inp.style.color='var(--danger)';
+  }
+}
+
+// ---- Spell ----
+let spellState={};
+function buildSpell(area,pool){
+  const item=shuffle(pool)[0];
+  const letters=shuffle([...item.w.toLowerCase()]);
+  spellState={word:item.w.toLowerCase(),meaning:item.m,letters,chosen:[]};
+  renderSpell(area);
+}
+
+function renderSpell(area){
+  const {word,meaning,letters,chosen}=spellState;
+  area.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">拼字遊戲：根據中文拼出英文</div>
+  <div style="font-size:20px;font-weight:700;color:var(--primary);text-align:center;margin-bottom:6px">${meaning}</div>
+  <div class="spell-answer" id="spellAns">${chosen.map((l,i)=>`<div class="spell-slot" onclick="unspell(${i})">${l}</div>`).join('')}${Array(word.length-chosen.length).fill('<div class="spell-slot" style="border-bottom:2px solid var(--border)"></div>').join('')}</div>
+  <div class="spell-letters" id="spellLetters">${letters.map((l,i)=>`<div class="spell-letter${spellState.usedIdx&&spellState.usedIdx.includes(i)?' used':''}" onclick="addLetter('${l}',${i})">${l.toUpperCase()}</div>`).join('')}</div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn sm" onclick="checkSpell(area)">確認</button>
+    <button class="btn sm" onclick="spellState.chosen=[];spellState.usedIdx=[];renderSpell(document.getElementById('gameArea'))">重設</button>
+    <button class="btn sm pri" onclick="buildSpell(document.getElementById('gameArea'),getWordPool())">換單字</button>
+  </div>
+  <div id="spellResult" style="margin-top:8px;font-size:13px"></div>`;
+}
+
+function addLetter(l,i){
+  if(spellState.usedIdx&&spellState.usedIdx.includes(i)) return;
+  if(spellState.chosen.length>=spellState.word.length) return;
+  if(!spellState.usedIdx) spellState.usedIdx=[];
+  spellState.usedIdx.push(i);
+  spellState.chosen.push(l);
+  renderSpell(document.getElementById('gameArea'));
+}
+
+function unspell(i){
+  spellState.chosen.splice(i,1);
+  spellState.usedIdx&&spellState.usedIdx.splice(i,1);
+  renderSpell(document.getElementById('gameArea'));
+}
+
+function checkSpell(area){
+  const ans=spellState.chosen.join('');
+  const res=document.getElementById('spellResult');
+  if(ans===spellState.word){ res.innerHTML='<span style="color:var(--success)">✅ 拼對了！</span>'; gameScoreVal++; document.getElementById('gameScore').textContent='答對 '+gameScoreVal+' 題'; }
+  else { res.innerHTML=`<span style="color:var(--danger)">❌ 正確是：<strong>${spellState.word}</strong></span>`; }
+}
+
+// ---- Flash ----
+let flashIdx=0, flashPool=[];
+function buildFlash(area,pool){
+  flashPool=shuffle(pool);flashIdx=0;showFlash(area);
+}
+function showFlash(area){
+  if(flashIdx>=flashPool.length){ area.innerHTML='<div style="text-align:center;padding:32px;font-size:18px">🎉 全部複習完畢！</div>'; return; }
+  const item=flashPool[flashIdx];
+  area.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">閃卡 ${flashIdx+1}/${flashPool.length}（點擊翻面）</div>
+  <div class="flashcard" id="fc" onclick="document.getElementById('fc').classList.toggle('flipped')">
+    <div class="flashcard-inner">
+      <div class="flashcard-front"><div class="fc-word">${item.w}</div><div class="fc-hint">點擊查看中文</div></div>
+      <div class="flashcard-back"><div class="fc-meaning">${item.m}</div>${item.p?`<div class="fc-phonetic">/ ${item.p} /</div>`:''}</div>
+    </div>
+  </div>
+  <div class="row" style="margin-top:14px;justify-content:center">
+    <button class="btn sm" onclick="spk('${item.w}')">🔊 發音</button>
+    <button class="btn sm" onclick="flashIdx++;showFlash(document.getElementById('gameArea'))">下一張 →</button>
+    <button class="btn sm pri" onclick="buildFlash(document.getElementById('gameArea'),getWordPool())">重新洗牌</button>
+  </div>`;
+}
+
+// ---- Whack ----
+let whackState={};
+function buildWhack(area,pool){
+  whackState={pool:shuffle(pool),cur:null,score:0,lives:3,timer:null,round:0,total:10};
+  area.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <span style="font-size:13px;font-weight:600">打地鼠：看中文打英文</span>
+    <span id="whackInfo" style="font-size:12px;color:var(--primary)">分數：0 ❤️ 3</span>
+  </div>
+  <div style="font-size:18px;font-weight:700;text-align:center;color:var(--primary);margin-bottom:12px" id="whackCue">準備好了嗎？</div>
+  <div class="whack-grid" id="whackGrid"></div>
+  <div style="margin-top:10px;text-align:center">
+    <button class="btn pri" onclick="startWhack()">▶ 開始</button>
+  </div>`;
+  const grid=document.getElementById('whackGrid');
+  for(let i=0;i<8;i++){
+    const d=document.createElement('div');d.className='whack-hole';d.dataset.idx=i;d.onclick=()=>hitWhack(d);
+    grid.appendChild(d);
+  }
+}
+
+function startWhack(){
+  document.querySelector('#gameArea button')?.remove();
+  whackState.score=0;whackState.lives=3;whackState.round=0;
+  nextWhack();
+}
+
+function nextWhack(){
+  if(whackState.round>=whackState.total||whackState.lives<=0){
+    clearTimeout(whackState.timer);
+    document.getElementById('whackCue').textContent=`遊戲結束！得分：${whackState.score}/${whackState.total}`;
+    document.getElementById('gameScore').textContent=`最終得分：${whackState.score}`;
+    return;
+  }
+  const item=whackState.pool[whackState.round%whackState.pool.length];
+  whackState.cur=item;
+  document.getElementById('whackCue').textContent=item.m;
+  const holes=document.querySelectorAll('.whack-hole');
+  const fakes=shuffle([...whackState.pool.filter(x=>x.w!==item.w)]).slice(0,7);
+  const all=shuffle([item,...fakes]).slice(0,8);
+  holes.forEach((h,i)=>{ h.className='whack-hole';h.textContent=all[i]?.w||''; h.dataset.word=all[i]?.w||''; });
+  const activeHole=Array.from(holes).find(h=>h.dataset.word===item.w);
+  if(activeHole) activeHole.classList.add('active');
+  whackState.timer=setTimeout(()=>{
+    whackState.lives--;
+    document.getElementById('whackInfo').textContent=`分數：${whackState.score} ❤️ ${whackState.lives}`;
+    whackState.round++;nextWhack();
+  },3000);
+}
+
+function hitWhack(el){
+  if(!whackState.cur) return;
+  clearTimeout(whackState.timer);
+  if(el.dataset.word===whackState.cur.w){
+    el.classList.add('hit');whackState.score++;
+  } else {
+    el.classList.add('miss');whackState.lives--;
+  }
+  document.getElementById('whackInfo').textContent=`分數：${whackState.score} ❤️ ${whackState.lives}`;
+  whackState.round++;
+  setTimeout(()=>nextWhack(),500);
+}
+
+// ---- Listen ----
+let listenState={};
+function buildListen(area,pool){
+  const items=shuffle(pool).slice(0,5);listenState={items,idx:0,score:0};
+  showListenQ(area);
+}
+function showListenQ(area){
+  const {items,idx}=listenState;
+  if(idx>=items.length){ area.innerHTML=`<div style="text-align:center;padding:32px"><div style="font-size:24px;font-weight:700;color:var(--primary)">${listenState.score}/${items.length}</div><div style="margin-top:8px;color:var(--muted)">聽音選字完成！</div><button class="btn pri" style="margin-top:12px" onclick="buildListen(document.getElementById('gameArea'),getWordPool())">再玩一次</button></div>`; return; }
+  const cur=items[idx];
+  const fakes=shuffle(pool.filter(x=>x.w!==cur.w)).slice(0,3);
+  const choices=shuffle([cur,...fakes]);
+  area.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:12px">聽音選字 ${idx+1}/${items.length} · 得分：${listenState.score}</div>
+  <div style="text-align:center;margin-bottom:16px">
+    <button class="btn pri" style="font-size:16px;padding:12px 24px" onclick="spk('${cur.w}',0.7)">🔊 播放</button>
+    <div style="font-size:12px;color:var(--hint);margin-top:8px">點擊按鈕聽發音，然後選出對應的英文單字</div>
+  </div>
+  <div class="listen-choices">${choices.map(c=>`<button class="opt" onclick="checkListen(this,'${c.w}','${cur.w}')">${c.w}<br><small style="color:var(--muted)">${c.m}</small></button>`).join('')}</div>
+  <div id="listenResult" style="margin-top:10px;font-size:13px;text-align:center"></div>`;
+  setTimeout(()=>spk(cur.w,0.7),300);
+}
+
+function checkListen(el,chosen,correct){
+  document.querySelectorAll('.listen-choices .opt').forEach(b=>b.onclick=null);
+  const res=document.getElementById('listenResult');
+  if(chosen===correct){ el.classList.add('ok'); res.innerHTML='<span style="color:var(--success)">✅ 答對！</span>'; listenState.score++; }
+  else { el.classList.add('ng'); document.querySelectorAll('.listen-choices .opt').forEach(b=>{ if(b.textContent.includes(correct)) b.classList.add('ok'); }); res.innerHTML=`<span style="color:var(--danger)">❌ 正確是 <strong>${correct}</strong></span>`; }
+  setTimeout(()=>{ listenState.idx++; showListenQ(document.getElementById('gameArea')); },1200);
+}
+
+// ======= WORDBOOK =======
+function renderWB(){
+  const q=(document.getElementById('wbSearch')?.value||'').toLowerCase();
+  const filtered=wordbook.filter(w=>w.word.toLowerCase().includes(q)||w.detail.includes(q));
+  document.getElementById('wbCount').textContent=filtered.length+' 個單字';
+  const list=document.getElementById('wbList');
+  if(!filtered.length){ list.innerHTML=''; document.getElementById('wbEmpty').classList.remove('hidden'); return; }
+  document.getElementById('wbEmpty').classList.add('hidden');
+  list.innerHTML=filtered.map((w,i)=>`<div class="wb-row">
+    <div><div class="wb-en">${w.word}</div><div class="wb-zh">${w.detail}</div></div>
+    <div class="row">
+      <button class="btn sm" onclick="spk('${w.word}')">🔊</button>
+      <button class="btn sm" onclick="removeWB(${wordbook.indexOf(w)})">🗑️</button>
+    </div>
+  </div>`).join('');
+}
+
+document.getElementById('wbSearch').oninput=renderWB;
+
+function removeWB(i){ if(confirm('確定刪除？')) { wordbook.splice(i,1); saveDB(); renderWB(); } }
+function clearWB(){ if(confirm('確定清空所有單字？')){ wordbook=[]; saveDB(); renderWB(); } }
+function exportWB(){
+  const txt=wordbook.map(w=>`${w.word}\t${w.detail}`).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(txt);
+  a.download='wordbook.txt';a.click();
+}
+
+// ======= DAILY =======
+function loadDaily(){
+  const s=dailySents[dailyIdx%dailySents.length];
+  document.getElementById('dailyEn').textContent=s.en;
+  document.getElementById('dailyZh').textContent=s.zh;
+  const chips=document.getElementById('dailyChips');chips.innerHTML='';
+  document.getElementById('dailyWBox').classList.add('hidden');
+  s.en.replace(/[^a-zA-Z\s']/g,'').split(/\s+/).filter(Boolean).forEach(w=>{
+    const c=document.createElement('div');c.className='chip';c.textContent=w;
+    c.onclick=()=>{
+      const gw=gameWords.find(x=>x.w.toLowerCase()===w.toLowerCase());
+      document.getElementById('dailyWHead').textContent=w+(gw?' / '+gw.p:'');
+      document.getElementById('dailyWBody').innerHTML=gw?`<div>📖 ${gw.m}</div>`:`<div>📖 請使用截圖解析取得詳細解析</div>`;
+      document.getElementById('dailyWBox').classList.remove('hidden');
+    };
+    chips.appendChild(c);
+  });
+}
+function nextDaily(){ dailyIdx++; loadDaily(); }
+function saveDailyWord(){
+  const s=dailySents[dailyIdx%dailySents.length];
+  s.en.replace(/[^a-zA-Z\s']/g,'').split(/\s+/).filter(Boolean).forEach(w=>{
+    if(!wordbook.find(x=>x.word===w.toLowerCase())){
+      wordbook.push({word:w.toLowerCase(),detail:'',saved:new Date().toLocaleDateString('zh-TW')});
+    }
+  });
+  saveDB(); alert('已將句中所有單字加入單字本');
+}
+
+// ======= WRITE =======
+async function gradeWriting(){
+  const txt=document.getElementById('writeInput').value.trim();
+  if(!txt){ alert('請先輸入英文'); return; }
+  document.getElementById('writeLoading').classList.remove('hidden');
+  document.getElementById('writeFeedback').classList.add('hidden');
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:`你是親切的英文老師，學生英文程度是台灣國中水準。請批改以下英文，用繁體中文解說。回傳JSON：{"corrected":"修正後英文","score":1-10整數,"feedback":[{"type":"error|suggestion|praise","original":"原文","fixed":"修正","reason":"繁體中文說明"}]}。只回傳JSON。\n學生英文：${txt}`}]})
+    });
+    const data=await r.json();
+    const txt2=data.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
+    const p=JSON.parse(txt2);
+    document.getElementById('writeCorrected').textContent=p.corrected||'';
+    document.getElementById('writeScore').textContent='分數 '+p.score+'/10';
+    const fb=document.getElementById('fbItems');
+    fb.innerHTML=(p.feedback||[]).map(f=>{
+      const ic=f.type==='error'?'❌':f.type==='praise'?'✅':'💡';
+      return `<div class="fb-item"><span>${ic}</span><div>${f.reason}${f.fixed?` <span style="color:var(--primary)">→ ${f.fixed}</span>`:''}</div></div>`;
+    }).join('');
+    document.getElementById('writeFeedback').classList.remove('hidden');
+  }catch(e){ alert('批改失敗，請稍後再試'); }
+  document.getElementById('writeLoading').classList.add('hidden');
+}
+
+// ======= STATS =======
+function renderStats(){
+  document.getElementById('stWords').textContent=wordbook.length;
+  document.getElementById('stQuiz').textContent=stat.quiz;
+  document.getElementById('stCorrect').textContent=stat.quiz?Math.round(stat.correct/stat.quiz*100)+'%':'0%';
+  const chart=document.getElementById('statChart');
+  const catNames={daily:'日常生活',travel:'搭機/旅遊',biz:'職場/商務',food:'餐廳/購物',medical:'醫療/健康',school:'學校/教育'};
+  if(!Object.keys(stat.cats).length){ chart.innerHTML='<div style="color:var(--hint);font-size:13px">還沒有答題記錄</div>'; }
+  else {
+    chart.innerHTML=Object.entries(stat.cats).map(([k,v])=>{
+      const pct=v.total?Math.round(v.correct/v.total*100):0;
+      return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>${catNames[k]||k}</span><span style="color:var(--primary)">${v.correct}/${v.total} (${pct}%)</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></div>`;
+    }).join('');
+  }
+  const recent=document.getElementById('statRecent');
+  const last5=wordbook.slice(-5).reverse();
+  recent.innerHTML=last5.length?last5.map(w=>`<div class="wb-row"><div><div class="wb-en">${w.word}</div><div class="wb-zh">${w.detail}</div></div><div style="font-size:11px;color:var(--hint)">${w.saved}</div></div>`).join(''):'<div style="color:var(--hint);font-size:13px">還沒有單字</div>';
+}
+
+// ======= INIT =======
+loadQ();
+loadDaily();
+renderWB();
+
+// ===== SHEETS SYNC =====
+const SCRIPT_KEY = 'eb_script_url';
+let scriptUrl = localStorage.getItem(SCRIPT_KEY) || '';
+let syncStatus = 'none'; // none | ok | err | syncing
+
+function renderSyncBar() {
+  const existing = document.getElementById('syncStatusBar');
+  if (existing) existing.remove();
+  const bar = document.createElement('div');
+  bar.id = 'syncStatusBar';
+  bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:150;max-width:780px;margin:0 auto;padding:0 0 0 0';
+  if (!scriptUrl) {
+    bar.innerHTML = `<div class="sync-bar warn"><span class="sync-dot"></span><span style="flex:1">尚未連接 Google Sheets 同步</span><button class="btn sm pri" onclick="document.getElementById('syncModal').classList.add('on')">☁️ 設定同步</button></div>`;
+  } else if (syncStatus === 'syncing') {
+    bar.innerHTML = `<div class="sync-bar"><span class="sync-dot" style="animation:blink 1s infinite"></span><span>同步中...</span></div>`;
+  } else if (syncStatus === 'ok') {
+    bar.innerHTML = `<div class="sync-bar"><span class="sync-dot"></span><span style="flex:1">✅ 已同步至 Google Sheets</span><button class="btn sm" onclick="pullFromSheets()">⬇ 從雲端載入</button><button class="btn sm" onclick="document.getElementById('syncModal').classList.add('on')">⚙️</button></div>`;
+  } else if (syncStatus === 'err') {
+    bar.innerHTML = `<div class="sync-bar err"><span class="sync-dot"></span><span style="flex:1">❌ 同步失敗，請確認網址是否正確</span><button class="btn sm" onclick="document.getElementById('syncModal').classList.add('on')">重新設定</button></div>`;
+  }
+  document.body.appendChild(bar);
+}
+
+function saveScriptUrl() {
+  const url = document.getElementById('scriptUrlInput').value.trim();
+  if (!url.startsWith('https://script.google.com')) { alert('請貼上正確的 Apps Script 網址'); return; }
+  scriptUrl = url;
+  localStorage.setItem(SCRIPT_KEY, url);
+  document.getElementById('syncModal').classList.remove('on');
+  pushToSheets();
+}
+
+async function pushToSheets() {
+  if (!scriptUrl) return;
+  syncStatus = 'syncing'; renderSyncBar();
+  try {
+    const resp = await fetch(scriptUrl, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'sync', words: wordbook })
+    });
+    const data = await resp.json();
+    syncStatus = data.status === 'ok' ? 'ok' : 'err';
+  } catch(e) { syncStatus = 'err'; }
+  renderSyncBar();
+}
+
+async function pullFromSheets() {
+  if (!scriptUrl) return;
+  syncStatus = 'syncing'; renderSyncBar();
+  try {
+    const resp = await fetch(scriptUrl + '?action=getAll');
+    const data = await resp.json();
+    if (data.status === 'ok') {
+      wordbook = data.words.map(w => ({word:w.word, detail:w.meaning||'', pos:w.pos||'', saved:w.saved||''}));
+      saveDB(); renderWB();
+      syncStatus = 'ok';
+    } else { syncStatus = 'err'; }
+  } catch(e) { syncStatus = 'err'; }
+  renderSyncBar();
+}
+
+// Auto sync when wordbook changes
+const origSaveDB = saveDB;
+function saveDB() {
+  localStorage.setItem(WB_KEY, JSON.stringify(wordbook));
+  localStorage.setItem(STAT_KEY, JSON.stringify(stat));
+  if (scriptUrl) pushToSheets();
+}
+
+renderSyncBar();
+if (scriptUrl) pullFromSheets();
+
+</script>
+
+<!-- ===== SYNC MODAL ===== -->
+<div class="modal-overlay" id="syncModal">
+  <div class="modal">
+    <h2>☁️ 連接 Google Sheets 同步</h2>
+    <div class="step"><div class="step-num">1</div><div>開啟 <a href="https://sheets.google.com" target="_blank" style="color:var(--primary)">Google Sheets</a> 建立新試算表，名稱隨意（例如：English Booster）</div></div>
+    <div class="step"><div class="step-num">2</div><div>點上方選單 <strong>擴充功能 → Apps Script</strong>，把 <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">Code.gs</code> 的內容貼進去並存檔</div></div>
+    <div class="step"><div class="step-num">3</div><div>點 <strong>部署 → 新增部署作業</strong>，類型選「網頁應用程式」，執行身分選「我」，存取權選「任何人」，按部署</div></div>
+    <div class="step"><div class="step-num">4</div><div>複製產生的 <strong>網頁應用程式網址</strong>（形如 https://script.google.com/macros/s/...），貼到下方</div></div>
+    <p style="margin-top:10px;margin-bottom:4px"><strong>貼上你的 Apps Script 網址：</strong></p>
+    <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/..." />
+    <div class="row">
+      <button class="btn pri" onclick="saveScriptUrl()">✅ 連接並同步</button>
+      <button class="btn" onclick="document.getElementById('syncModal').classList.remove('on')">取消</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
