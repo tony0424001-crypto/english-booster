@@ -1272,49 +1272,91 @@ loadQ();
 loadDaily();
 renderWB();
 
-// ===== SHEETS SYNC =====
+// ===== SHEETS SYNC v2 (CORS-safe via no-cors + GET for reads) =====
 const SCRIPT_KEY = 'eb_script_url';
 let scriptUrl = localStorage.getItem(SCRIPT_KEY) || '';
-let syncStatus = 'none'; // none | ok | err | syncing
+let syncStatus = 'none';
 
 function renderSyncBar() {
   const existing = document.getElementById('syncStatusBar');
   if (existing) existing.remove();
   const bar = document.createElement('div');
   bar.id = 'syncStatusBar';
-  bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:150;max-width:780px;margin:0 auto;padding:0 0 0 0';
+  bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:150;max-width:780px;margin:0 auto';
   if (!scriptUrl) {
     bar.innerHTML = `<div class="sync-bar warn"><span class="sync-dot"></span><span style="flex:1">尚未連接 Google Sheets 同步</span><button class="btn sm pri" onclick="document.getElementById('syncModal').classList.add('on')">☁️ 設定同步</button></div>`;
   } else if (syncStatus === 'syncing') {
-    bar.innerHTML = `<div class="sync-bar"><span class="sync-dot" style="animation:blink 1s infinite"></span><span>同步中...</span></div>`;
+    bar.innerHTML = `<div class="sync-bar"><span class="sync-dot"></span><span>同步中...</span></div>`;
   } else if (syncStatus === 'ok') {
     bar.innerHTML = `<div class="sync-bar"><span class="sync-dot"></span><span style="flex:1">✅ 已同步至 Google Sheets</span><button class="btn sm" onclick="pullFromSheets()">⬇ 從雲端載入</button><button class="btn sm" onclick="document.getElementById('syncModal').classList.add('on')">⚙️</button></div>`;
   } else if (syncStatus === 'err') {
-    bar.innerHTML = `<div class="sync-bar err"><span class="sync-dot"></span><span style="flex:1">❌ 同步失敗，請確認網址是否正確</span><button class="btn sm" onclick="document.getElementById('syncModal').classList.add('on')">重新設定</button></div>`;
+    bar.innerHTML = `<div class="sync-bar err"><span class="sync-dot"></span><span style="flex:1">❌ 同步失敗，請重新部署 Apps Script（見下方說明）</span><button class="btn sm" onclick="showSyncHelp()">❓ 怎麼修</button><button class="btn sm" onclick="document.getElementById('syncModal').classList.add('on')">⚙️ 重設</button></div>`;
   }
   document.body.appendChild(bar);
 }
 
+function showSyncHelp() {
+  alert('同步失敗最常見原因：\n\n1. Apps Script 需要「重新部署」\n   → 在 Apps Script 點「部署→管理部署作業」\n   → 點鉛筆圖示編輯，版本改選「新版本」\n   → 再次部署並複製新的網址\n\n2. 確認存取權是「任何人」（不是「任何人（包含匿名）」）\n\n3. 授權時要選你的 Google 帳號並允許所有權限');
+}
+
+// 用 GET + URL 參數傳資料給 Apps Script（完全繞過 CORS 限制）
+async function gasGet(params) {
+  const url = new URL(scriptUrl);
+  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : v));
+  const resp = await fetch(url.toString(), { method: 'GET' });
+  return resp.json();
+}
+
+// 用 no-cors POST 寫入（不能讀回應，所以只用於 sync 推送）
+async function gasPost(body) {
+  await fetch(scriptUrl, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(body)
+  });
+}
+
+async function pingTest(url) {
+  try {
+    const resp = await fetch(url + '?action=ping', { method: 'GET' });
+    const data = await resp.json();
+    return data.status === 'ok';
+  } catch(e) { return false; }
+}
+
 function saveScriptUrl() {
   const url = document.getElementById('scriptUrlInput').value.trim();
-  if (!url.startsWith('https://script.google.com')) { alert('請貼上正確的 Apps Script 網址'); return; }
+  if (!url.startsWith('https://script.google.com')) {
+    alert('請貼上正確的 Apps Script 網址\n（開頭應為 https://script.google.com/macros/s/...）');
+    return;
+  }
   scriptUrl = url;
   localStorage.setItem(SCRIPT_KEY, url);
   document.getElementById('syncModal').classList.remove('on');
-  pushToSheets();
+  testAndSync();
+}
+
+async function testAndSync() {
+  syncStatus = 'syncing'; renderSyncBar();
+  const ok = await pingTest(scriptUrl);
+  if (!ok) { syncStatus = 'err'; renderSyncBar(); return; }
+  await pushToSheets();
 }
 
 async function pushToSheets() {
   if (!scriptUrl) return;
   syncStatus = 'syncing'; renderSyncBar();
   try {
-    const resp = await fetch(scriptUrl, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'sync', words: wordbook })
-    });
-    const data = await resp.json();
-    syncStatus = data.status === 'ok' ? 'ok' : 'err';
-  } catch(e) { syncStatus = 'err'; }
+    // 先 ping 確認可連
+    const ok = await pingTest(scriptUrl);
+    if (!ok) throw new Error('ping failed');
+    // 用 no-cors POST 推送（Apps Script doPost 接收 text/plain body）
+    await gasPost({ action: 'sync', words: wordbook });
+    syncStatus = 'ok';
+  } catch(e) {
+    syncStatus = 'err';
+  }
   renderSyncBar();
 }
 
@@ -1322,19 +1364,19 @@ async function pullFromSheets() {
   if (!scriptUrl) return;
   syncStatus = 'syncing'; renderSyncBar();
   try {
-    const resp = await fetch(scriptUrl + '?action=getAll');
-    const data = await resp.json();
+    const data = await gasGet({ action: 'getAll' });
     if (data.status === 'ok') {
-      wordbook = data.words.map(w => ({word:w.word, detail:w.meaning||'', pos:w.pos||'', saved:w.saved||''}));
-      saveDB(); renderWB();
+      wordbook = data.words.map(w => ({
+        word: w.word, detail: w.meaning || '', pos: w.pos || '', saved: w.saved || ''
+      }));
+      localStorage.setItem(WB_KEY, JSON.stringify(wordbook));
+      renderWB();
       syncStatus = 'ok';
     } else { syncStatus = 'err'; }
   } catch(e) { syncStatus = 'err'; }
   renderSyncBar();
 }
 
-// Auto sync when wordbook changes
-const origSaveDB = saveDB;
 function saveDB() {
   localStorage.setItem(WB_KEY, JSON.stringify(wordbook));
   localStorage.setItem(STAT_KEY, JSON.stringify(stat));
