@@ -177,6 +177,18 @@ textarea.write-area:focus{border-color:var(--primary)}
 .modal .step:last-of-type{border-bottom:none}
 .modal .step-num{width:20px;height:20px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
 
+
+/* Part 7 sub-questions */
+.sub-q{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.sub-q:last-child{border-bottom:none;margin-bottom:0}
+.sub-q-text{font-size:13px;font-weight:500;margin-bottom:8px;line-height:1.6}
+.sub-opts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+/* passage box scrollbar */
+#quizPassage::-webkit-scrollbar{width:4px}
+#quizPassage::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+/* import textarea */
+#importJson:focus{border-color:var(--primary)}
+
 </style>
 </head>
 <body>
@@ -234,52 +246,113 @@ textarea.write-area:focus{border-color:var(--primary)}
 
 <!-- ===== 考古題 ===== -->
 <div class="pane" id="pane-quiz">
+
+  <!-- 控制列 -->
   <div class="card" style="padding:12px">
-    <div class="lbl" style="margin-bottom:6px">主題分類</div>
-    <div class="cat-row" id="quizCats">
-      <div class="ctab on" data-cat="daily">日常生活</div>
-      <div class="ctab" data-cat="travel">搭機/旅遊</div>
-      <div class="ctab" data-cat="biz">職場/商務</div>
-      <div class="ctab" data-cat="food">餐廳/購物</div>
-      <div class="ctab" data-cat="medical">醫療/健康</div>
-      <div class="ctab" data-cat="school">學校/教育</div>
-    </div>
-    <div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
       <div>
-        <div class="lbl" style="margin-bottom:4px">難度</div>
+        <div class="lbl" style="margin-bottom:5px">多益部分</div>
+        <div class="cat-row" id="quizParts">
+          <div class="ctab on" data-part="p5">Part 5｜句子填空</div>
+          <div class="ctab" data-part="p6">Part 6｜段落填空</div>
+          <div class="ctab" data-part="p7">Part 7｜閱讀測驗</div>
+        </div>
+      </div>
+      <div>
+        <div class="lbl" style="margin-bottom:5px">難度</div>
         <div class="cat-row" id="quizDiffs">
           <div class="diff-tab on easy" data-diff="easy">⭐ 簡單</div>
           <div class="diff-tab" data-diff="mid">⭐⭐ 普通</div>
           <div class="diff-tab" data-diff="hard">⭐⭐⭐ 困難</div>
         </div>
       </div>
-      <div>
-        <div class="lbl" style="margin-bottom:4px">題型</div>
-        <div class="cat-row" id="quizTypes">
-          <div class="ctab on" data-type="vocab">單字</div>
-          <div class="ctab" data-type="grammar">語彙</div>
-          <div class="ctab" data-type="reading">閱讀</div>
-        </div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div class="lbl" style="margin:0">題庫來源：</div>
+      <div class="cat-row" id="quizSrcTabs">
+        <div class="ctab on" data-src="ai">🤖 AI仿真題</div>
+        <div class="ctab" data-src="custom">📂 我的題庫</div>
       </div>
+      <button class="btn sm" style="margin-left:auto" onclick="document.getElementById('importModal').classList.add('on')">＋ 匯入題庫</button>
+      <button class="btn sm" onclick="showQBManager()">📋 管理題庫</button>
     </div>
   </div>
+
+  <!-- 題目卡片 -->
   <div class="card" id="quizCard">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div style="display:flex;gap:6px">
-        <span class="tag blue" id="quizTagCat"></span>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span class="tag" style="background:#e0e7ff;color:#3730a3" id="quizTagPart"></span>
         <span class="tag orange" id="quizTagDiff"></span>
-        <span class="tag" style="background:#f1f5f9;color:#475569" id="quizTagType"></span>
+        <span class="tag" id="quizTagSrc"></span>
       </div>
       <span style="font-size:11px;color:var(--hint)" id="quizCount"></span>
     </div>
-    <div class="progress-bar" style="margin-bottom:10px"><div class="progress-fill" id="quizProg" style="width:0%"></div></div>
-    <div class="quiz-q-text" id="quizQ"></div>
-    <div class="quiz-opts" id="quizOpts"></div>
+    <div class="progress-bar" style="margin-bottom:12px"><div class="progress-fill" id="quizProg" style="width:0%"></div></div>
+
+    <!-- Part 5/6 填空題 -->
+    <div id="quizFillArea">
+      <div class="quiz-q-text" id="quizQ"></div>
+      <div class="quiz-opts" id="quizOpts"></div>
+    </div>
+
+    <!-- Part 7 閱讀題 -->
+    <div id="quizReadArea" class="hidden">
+      <div id="quizPassage" style="background:var(--bg);border-radius:var(--radius-sm);padding:12px;font-size:13px;line-height:1.9;margin-bottom:12px;border:1px solid var(--border);max-height:260px;overflow-y:auto;white-space:pre-wrap"></div>
+      <div id="quizSubQs"></div>
+    </div>
+
     <div id="quizWordChips" class="chips" style="margin-top:10px"></div>
     <div id="quizExplain" class="explain-box hidden"></div>
     <div class="row" style="margin-top:12px">
-      <button class="btn sm" onclick="spk(document.getElementById('quizQ').textContent)">🔊 朗讀題目</button>
+      <button class="btn sm" onclick="spkQuiz()">🔊 朗讀</button>
+      <span id="quizSessionStat" style="font-size:11px;color:var(--muted);margin-left:4px"></span>
       <button class="btn pri sm" style="margin-left:auto" onclick="nextQ()">下一題 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- 匯入題庫 Modal -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <h2>📂 匯入自訂題庫</h2>
+    <p>貼上 JSON 格式的題目，會儲存在你的瀏覽器中，永久保留。</p>
+    <div style="margin-bottom:6px">
+      <div class="lbl">選擇部分</div>
+      <select id="importPart" style="width:100%;margin-bottom:8px">
+        <option value="p5">Part 5 — 句子填空</option>
+        <option value="p6">Part 6 — 段落填空</option>
+        <option value="p7">Part 7 — 閱讀測驗</option>
+      </select>
+      <div class="lbl">選擇難度</div>
+      <select id="importDiff" style="width:100%;margin-bottom:8px">
+        <option value="easy">⭐ 簡單</option>
+        <option value="mid">⭐⭐ 普通</option>
+        <option value="hard">⭐⭐⭐ 困難</option>
+      </select>
+    </div>
+    <div class="lbl">JSON 題目（貼上後按匯入）</div>
+    <textarea id="importJson" style="width:100%;height:140px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;font-family:monospace;resize:vertical;outline:none;margin-bottom:8px" placeholder='Part5/6 格式：
+[{"q":"She ------- to the office every day.","ch":["walks","walk","walked","walking"],"ans":0,"ex":"解析說明","words":[{"w":"office","m":"辦公室"}]}]
+
+Part7 格式：
+[{"passage":"文章內容...","qs":[{"q":"問題","ch":["A","B","C","D"],"ans":0,"ex":"解析"}]}]'></textarea>
+    <div class="row">
+      <button class="btn pri" onclick="importCustomQB()">✅ 匯入</button>
+      <button class="btn sm" onclick="downloadTemplate()">📥 下載範本</button>
+      <button class="btn" onclick="document.getElementById('importModal').classList.remove('on')">取消</button>
+    </div>
+    <div id="importMsg" style="margin-top:8px;font-size:12px"></div>
+  </div>
+</div>
+
+<!-- 題庫管理 Modal -->
+<div class="modal-overlay" id="qbManagerModal">
+  <div class="modal">
+    <h2>📋 自訂題庫管理</h2>
+    <div id="qbManagerList"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" onclick="document.getElementById('qbManagerModal').classList.remove('on')">關閉</button>
     </div>
   </div>
 </div>
@@ -412,251 +485,112 @@ const WB_KEY='eb_wb', STAT_KEY='eb_stat';
 let wordbook=JSON.parse(localStorage.getItem(WB_KEY)||'[]');
 let stat=JSON.parse(localStorage.getItem(STAT_KEY)||'{"quiz":0,"correct":0,"cats":{}}');
 let selWord='', selWordData={};
-let quizCat='daily', quizDiff='easy', quizType='vocab', quizIdx=0, quizAnswered=false;
+// quizPart/quizDiff/quizSrc/quizIdx declared in Quiz Engine v3
 let dailyIdx=Math.floor(Math.random()*20);
 let curGame='connect', gameScoreVal=0;
 
 // ======= QUIZ BANK =======
-const QB={
-daily:{
-  easy:{
-    vocab:[
-      {q:"I _____ coffee every morning.",ch:["drink","drinks","drank","drinking"],ans:0,ex:"I（第一人稱）現在式用 drink，不加 s。",words:[{w:"coffee",m:"咖啡"},{w:"every",m:"每個"}]},
-      {q:"She _____ to school by bus.",ch:["goes","go","going","gone"],ans:0,ex:"She（第三人稱單數）現在式動詞加 s → goes。",words:[{w:"school",m:"學校"},{w:"bus",m:"公車"}]},
-      {q:"There is a _____ on the table.",ch:["book","books","booking","booked"],ans:0,ex:"There is + 單數名詞。book 是名詞「書」。",words:[{w:"table",m:"桌子"}]},
-      {q:"My mother is a good _____.",ch:["cook","cooked","cooking","cooks"],ans:0,ex:"a good cook = 一位好廚師（cook 作名詞）。",words:[{w:"mother",m:"母親"},{w:"good",m:"好的"}]},
-      {q:"Please _____ the door when you leave.",ch:["close","closed","closes","closing"],ans:0,ex:"祈使句用動詞原形 close（關閉）。",words:[{w:"leave",m:"離開"},{w:"door",m:"門"}]}
+// ===== BUILTIN FALLBACK BANK (Part5/6/7, used when AI unavailable) =====
+// Answers are shuffled — ans index is randomised, not always 0
+const FALLBACK_QB = {
+  p5: {
+    easy: [
+      {q:"She ------- to the office by bus every day.",ch:["commutes","commute","commuted","commuting"],ans:0,ex:"第三人稱單數現在式：She commutes。commute = 通勤。",words:[{w:"commute",m:"通勤"},{w:"office",m:"辦公室"}]},
+      {q:"The package will be ------- by Thursday.",ch:["delivered","delivery","deliver","delivering"],ans:0,ex:"被動式 will be + p.p.，deliver → delivered。",words:[{w:"delivered",m:"送達"},{w:"package",m:"包裹"}]},
+      {q:"Please ------- the form completely before submitting.",ch:["fill out","fill in","filling","fill"],ans:1,ex:"fill in the form = 填寫表格（英式），fill out 也可以，但這裡 fill in 更自然。",words:[{w:"submit",m:"提交"},{w:"completely",m:"完整地"}]},
+      {q:"The ------- of the new product exceeded expectations.",ch:["launch","launched","launching","launcher"],ans:0,ex:"冠詞 The 後接名詞，launch（n.）= 推出、發布。",words:[{w:"launch",m:"推出；發射"},{w:"exceed",m:"超過"}]},
+      {q:"Employees are ------- to attend the safety training.",ch:["encouraged","encourages","encourage","encouraging"],ans:0,ex:"被動式 are + p.p.，鼓勵員工出席。",words:[{w:"employee",m:"員工"},{w:"safety",m:"安全"}]},
+      {q:"------- the heavy rain, the outdoor event was not cancelled.",ch:["Despite","Although","However","Because"],ans:0,ex:"Despite + 名詞片語（the heavy rain），although + 子句。",words:[{w:"despite",m:"儘管"},{w:"cancel",m:"取消"}]},
+      {q:"The report must be ------- to the manager by noon.",ch:["submitted","submit","submits","submitting"],ans:0,ex:"must be + p.p. = 被動語態，submit → submitted。",words:[{w:"noon",m:"正午"},{w:"submit",m:"提交"}]},
+      {q:"She has worked at this company ------- ten years.",ch:["for","since","during","from"],ans:0,ex:"for + 時間長度（ten years）；since + 時間點。",words:[{w:"company",m:"公司"},{w:"worked",m:"工作（現在完成式）"}]},
+      {q:"The ------- for the position requires five years of experience.",ch:["requirement","require","required","requiring"],ans:0,ex:"冠詞 The 後接名詞 requirement（要求、條件）。",words:[{w:"requirement",m:"要求、條件"},{w:"position",m:"職位"}]},
+      {q:"Mr. Chen ------- the quarterly report last Friday.",ch:["presented","presents","presenting","present"],ans:0,ex:"last Friday = 過去式，present → presented。",words:[{w:"quarterly",m:"每季的"},{w:"present",m:"報告、呈現"}]},
     ],
-    grammar:[
-      {q:"He _____ TV every evening.",ch:["watches","watch","watched","watching"],ans:0,ex:"He（第三人稱單數）習慣動作用現在式，watch → watches。",words:[{w:"evening",m:"傍晚"},{w:"every",m:"每個"}]},
-      {q:"There _____ many people in the park.",ch:["are","is","was","be"],ans:0,ex:"people 是複數，現在式用 are。",words:[{w:"park",m:"公園"},{w:"many",m:"許多"}]},
-      {q:"I haven't seen him _____ last year.",ch:["since","for","during","from"],ans:0,ex:"since + 時間點（last year）；for + 時間長度（two years）。",words:[{w:"seen",m:"看見（see的過去分詞）"}]},
-      {q:"She speaks English _____ than her brother.",ch:["better","more good","gooder","well"],ans:0,ex:"good 的比較級是 better，為不規則變化。",words:[{w:"speak",m:"說"},{w:"brother",m:"兄弟"}]},
-      {q:"Would you like _____ cup of tea?",ch:["a","an","the","some"],ans:0,ex:"cup（輔音開頭）前用 a，表示一杯。",words:[{w:"would like",m:"想要"},{w:"tea",m:"茶"}]}
+    mid: [
+      {q:"The new regulation will ------- all businesses operating in this district.",ch:["affect","effect","affection","effective"],ans:0,ex:"affect（v.）影響；effect（n.）效果。affect all businesses = 影響所有商家。",words:[{w:"regulation",m:"法規"},{w:"district",m:"區域"}]},
+      {q:"The project was completed ------- schedule, impressing the client.",ch:["ahead of","instead of","regardless of","in spite of"],ans:0,ex:"ahead of schedule = 提前完成，固定搭配。",words:[{w:"impress",m:"使印象深刻"},{w:"schedule",m:"時程"}]},
+      {q:"Please ensure that all invoices are ------- within 30 days.",ch:["processed","process","processing","procession"],ans:0,ex:"ensure that + 被動式 are processed，invoice = 發票/請款單。",words:[{w:"invoice",m:"發票"},{w:"ensure",m:"確保"}]},
+      {q:"The board of directors ------- the merger proposal unanimously.",ch:["approved","disapproved","proposed","withdrawn"],ans:0,ex:"approve = 批准，unanimously = 一致地（所有人同意）。",words:[{w:"merger",m:"合併"},{w:"unanimously",m:"一致地"}]},
+      {q:"------- of the applicants met the minimum qualifications.",ch:["None","Any","Every","Either"],ans:0,ex:"None of + 複數名詞 + 單數/複數動詞，表示「沒有一個」。",words:[{w:"applicant",m:"申請人"},{w:"qualification",m:"資格"}]},
     ],
-    reading:[
-      {q:"Notice: The library will be CLOSED on Saturday for cleaning. Regular hours resume on Sunday.\n\nWhat day is the library closed?",ch:["Friday","Saturday","Sunday","Monday"],ans:1,ex:"CLOSED on Saturday = 週六關閉。resume = 恢復。",words:[{w:"closed",m:"關閉的"},{w:"resume",m:"恢復"},{w:"regular",m:"正常的"}]},
-      {q:"Sign: No smoking inside the building. Violators will be fined.\n\nWhat will happen if someone smokes inside?",ch:["They get a prize","They will be fined","They must leave","Nothing happens"],ans:1,ex:"violators will be fined = 違規者將被罰款。fine 作動詞意思是「罰款」。",words:[{w:"violator",m:"違規者"},{w:"fine",m:"罰款"},{w:"sign",m:"告示牌"}]}
+    hard: [
+      {q:"The acquisition is contingent ------- regulatory approval from three jurisdictions.",ch:["upon","with","from","about"],ans:0,ex:"contingent upon = 視…而定（固定搭配），regulatory approval = 監管批准。",words:[{w:"contingent",m:"視條件而定"},{w:"jurisdiction",m:"管轄區域"}]},
+      {q:"Sales figures for Q3 were ------- below the projections outlined in the annual forecast.",ch:["markedly","marginally","momentarily","moderately"],ans:0,ex:"markedly = 明顯地（程度強），符合「大幅低於預測」的語境。",words:[{w:"projection",m:"預測"},{w:"markedly",m:"明顯地"}]},
+      {q:"The committee has yet to ------- on the proposed amendments to the bylaws.",ch:["deliberate","celebrate","liberate","reiterate"],ans:0,ex:"deliberate on = 審議、討論（正式用語）；bylaws = 章程。",words:[{w:"amendment",m:"修正案"},{w:"bylaw",m:"章程"}]},
+      {q:"------- the findings are inconclusive, the team will conduct further research.",ch:["Given that","Provided","In order that","So that"],ans:0,ex:"Given that = 鑑於、考慮到（引導原因子句），findings = 研究結果。",words:[{w:"inconclusive",m:"無定論的"},{w:"conduct",m:"進行"}]},
+      {q:"The restructuring plan will be ------- in phases to minimize disruption to operations.",ch:["implemented","implicated","imitated","improvised"],ans:0,ex:"implement in phases = 分階段實施；disruption = 干擾/中斷。",words:[{w:"restructuring",m:"重組"},{w:"disruption",m:"中斷、干擾"}]},
     ]
   },
-  mid:{
-    vocab:[
-      {q:"The meeting was _____ due to the holiday.",ch:["postponed","posted","proposed","processed"],ans:0,ex:"postpone = 延後、推遲。因為假日所以延後開會。",words:[{w:"postponed",m:"延後"},{w:"due to",m:"由於"}]},
-      {q:"She made a _____ to reduce sugar in her diet.",ch:["decision","division","revision","provision"],ans:0,ex:"make a decision = 做決定，決定減少飲食中的糖分。",words:[{w:"reduce",m:"減少"},{w:"diet",m:"飲食"}]},
-      {q:"The company _____ a 10% profit increase this year.",ch:["reported","reputed","repeated","replaced"],ans:0,ex:"report a profit increase = 報告利潤增長。",words:[{w:"profit",m:"利潤"},{w:"increase",m:"增加"}]},
-      {q:"Please _____ your seat until the seatbelt sign is off.",ch:["remain in","remove from","repair at","return to"],ans:0,ex:"remain in your seat = 留在座位上，飛機廣播常用語。",words:[{w:"remain",m:"保持、留在"},{w:"seatbelt",m:"安全帶"}]},
-      {q:"He was _____ for his outstanding performance.",ch:["recognized","reorganized","resized","realized"],ans:0,ex:"be recognized for = 因…被認可/表揚。",words:[{w:"outstanding",m:"傑出的"},{w:"performance",m:"表現"}]}
+  p6: {
+    easy: [
+      {passage:"To: All Staff\nFrom: Human Resources\nSubject: Office Closure\n\nDear Team,\n\nPlease be informed that our office will be ------- (1) on Monday, January 1st, in observance of New Year's Day. Normal operations will ------- (2) on Tuesday, January 2nd.\n\nIf you have any urgent matters, please contact your supervisor ------- (3) advance. We hope everyone enjoys a ------- (4) holiday season.\n\nBest regards,\nHR Department",
+       qs:[
+        {q:"Q1: ------- (1)",ch:["closed","opened","available","operating"],ans:0,ex:"in observance of = 為慶祝/紀念，所以辦公室會 closed（關閉）。"},
+        {q:"Q2: ------- (2)",ch:["resume","resumes","resuming","resumed"],ans:0,ex:"主詞 Normal operations（複數），動詞原形 resume = 恢復。"},
+        {q:"Q3: ------- (3)",ch:["in","on","at","by"],ans:0,ex:"in advance = 提前，固定搭配。"},
+        {q:"Q4: ------- (4)",ch:["restful","stressful","harmful","dreadful"],ans:0,ex:"上下文是祝福語，restful = 放鬆的、舒適的，語意最合適。"}
+      ]},
     ],
-    grammar:[
-      {q:"By the time she arrived, the meeting _____.",ch:["had already started","already started","has already started","is already starting"],ans:0,ex:"過去完成式（had + p.p.）：在她到達之前，會議已經開始了。",words:[{w:"by the time",m:"在…之前"},{w:"arrive",m:"到達"}]},
-      {q:"_____ he studied hard, he failed the exam.",ch:["Although","Because","Since","Unless"],ans:0,ex:"Although（雖然）引導讓步子句，表示「雖然他用功讀書，卻失敗了」。",words:[{w:"although",m:"雖然"},{w:"fail",m:"失敗"}]},
-      {q:"The project _____ by the team next week.",ch:["will be completed","will complete","is completing","completes"],ans:0,ex:"未來被動式：will be + p.p.，「專案將被團隊完成」。",words:[{w:"project",m:"專案"},{w:"complete",m:"完成"}]},
-      {q:"She asked me _____ the report was ready.",ch:["whether","weather","wither","rather"],ans:0,ex:"whether 引導間接疑問句（是否），weather 是天氣，注意拼法。",words:[{w:"report",m:"報告"},{w:"ready",m:"準備好"}]},
-      {q:"Not only _____ late, but he also forgot his ID.",ch:["was he","he was","is he","he is"],ans:0,ex:"Not only 置句首時，主詞與助動詞倒裝：Not only was he late...。",words:[{w:"forget",m:"忘記"},{w:"ID",m:"身份證"}]}
+    mid: [
+      {passage:"To: Marketing Team\nFrom: Sarah Lin, Director\nSubject: Q4 Campaign Update\n\nI am writing to provide an ------- (1) on our Q4 marketing campaign. As you know, we launched the new product line last month, and initial results have been ------- (2) promising.\n\nOur social media engagement has increased by 35%, and online sales have ------- (3) our targets by 12%. We will hold a team meeting on Friday to ------- (4) our strategy for the remainder of the quarter.\n\nThank you for your continued efforts.",
+       qs:[
+        {q:"Q1: ------- (1)",ch:["update","renewal","revision","outline"],ans:0,ex:"provide an update = 提供最新消息，是商業 email 固定用法。"},
+        {q:"Q2: ------- (2)",ch:["exceptionally","exception","except","excepted"],ans:0,ex:"副詞 exceptionally 修飾形容詞 promising，意為「特別地」。"},
+        {q:"Q3: ------- (3)",ch:["exceeded","receded","conceded","proceeded"],ans:0,ex:"exceeded our targets = 超過目標，exceed = 超越。"},
+        {q:"Q4: ------- (4)",ch:["refine","confine","define","decline"],ans:0,ex:"refine our strategy = 調整/精進策略，語境最合適。"}
+      ]},
     ],
-    reading:[
-      {q:"Email: Dear Team, Due to the upcoming system upgrade, all employees must back up their files by Friday. IT support will be available from 9 AM to 5 PM.\n\nWhat must employees do before the upgrade?",ch:["Install new software","Back up their files","Contact IT support","Submit a report"],ans:1,ex:"must back up their files = 必須備份檔案。due to the upcoming upgrade = 由於即將進行的升級。",words:[{w:"upcoming",m:"即將到來的"},{w:"back up",m:"備份"},{w:"available",m:"可用的"}]}
+    hard: [
+      {passage:"To: Board of Directors\nFrom: CFO Office\nSubject: Financial Performance — Q3\n\nThis report provides a ------- (1) of our financial performance for the third quarter. Despite a challenging macroeconomic environment, revenue grew by 8% year-over-year, ------- (2) primarily to strong demand in the Asia-Pacific region.\n\nOperating expenses, however, increased by 14%, largely ------- (3) higher raw material costs and expanded headcount. As a result, our operating margin has ------- (4) from 22% to 18%.\n\nWe recommend implementing cost-containment measures in Q4.",
+       qs:[
+        {q:"Q1: ------- (1)",ch:["summary","summation","summarize","summarized"],ans:0,ex:"a summary of = 一份…的摘要（名詞），冠詞 a 後接名詞。"},
+        {q:"Q2: ------- (2)",ch:["attributable","attributed","attributing","attribute"],ans:0,ex:"attributable to = 歸因於（形容詞片語），描述增長原因。"},
+        {q:"Q3: ------- (3)",ch:["due to","owing","because","result"],ans:0,ex:"due to + 名詞片語，表原因，largely due to = 主要由於。"},
+        {q:"Q4: ------- (4)",ch:["contracted","expanded","maintained","fluctuated"],ans:0,ex:"margin contracted from 22% to 18% = 利潤率從22%收縮至18%。"}
+      ]},
     ]
   },
-  hard:{
-    vocab:[
-      {q:"The board's decision to _____ the merger was met with shareholder resistance.",ch:["ratify","rectify","rattle","ravage"],ans:0,ex:"ratify = 批准（正式通過）。ratify the merger = 批准合併。",words:[{w:"merger",m:"合併"},{w:"shareholder",m:"股東"},{w:"resistance",m:"抵制"}]},
-      {q:"Her _____ approach to problem-solving impressed the entire department.",ch:["pragmatic","dramatic","systematic","diplomatic"],ans:0,ex:"pragmatic = 務實的，強調實際解決問題而非理論。",words:[{w:"approach",m:"方法；態度"},{w:"impress",m:"使印象深刻"}]},
-      {q:"The quarterly results _____ the analyst's forecasts by a wide margin.",ch:["surpassed","suppressed","surveyed","sustained"],ans:0,ex:"surpass = 超越，超過預測。by a wide margin = 大幅超過。",words:[{w:"quarterly",m:"每季度的"},{w:"forecast",m:"預測"},{w:"margin",m:"差距"}]},
-      {q:"The CEO made a _____ statement, avoiding any direct answers.",ch:["non-committal","non-negotiable","non-sequential","non-essential"],ans:0,ex:"non-committal = 不表態的、含糊的，避免做出承諾的說法。",words:[{w:"statement",m:"聲明"},{w:"avoid",m:"避免"}]},
-      {q:"The new policy will _____ take effect at the beginning of the fiscal year.",ch:["officially","casually","marginally","tentatively"],ans:0,ex:"officially take effect = 正式生效。fiscal year = 財政年度。",words:[{w:"fiscal",m:"財政的"},{w:"effect",m:"效力"}]}
+  p7: {
+    easy: [
+      {passage:"NOTICE\n\nThe Riverside Community Center will be undergoing renovation from March 1 to March 31. During this period, all fitness classes will be held at the Downtown Branch located at 45 Main Street.\n\nMembers who wish to access the Downtown Branch must present their current membership card. Parking is available on-site at no additional charge.\n\nWe apologize for any inconvenience and thank you for your patience.",
+       qs:[
+        {q:"Where will fitness classes be held during March?",ch:["At Riverside Community Center","At 45 Main Street","At a temporary outdoor facility","Online only"],ans:1,ex:"Downtown Branch located at 45 Main Street = 健身課改在主街45號分館。"},
+        {q:"What must members bring to the Downtown Branch?",ch:["A photo ID","Their membership card","A reservation slip","Cash payment"],ans:1,ex:"must present their current membership card = 必須出示會員卡。"},
+        {q:"What is true about parking at the Downtown Branch?",ch:["It costs extra","It is not available","It is free","It requires advance booking"],ans:2,ex:"at no additional charge = 不需額外收費 = free。"}
+      ]},
+      {passage:"Job Posting: Administrative Assistant\n\nWe are seeking a motivated Administrative Assistant to join our team. Responsibilities include managing schedules, handling correspondence, and coordinating meetings.\n\nRequirements:\n- High school diploma or equivalent\n- Proficiency in Microsoft Office\n- Excellent communication skills\n- Minimum 2 years of office experience\n\nTo apply, send your resume and cover letter to hr@company.com by April 15.\n\nOnly shortlisted candidates will be contacted.",
+       qs:[
+        {q:"What is one responsibility of the Administrative Assistant?",ch:["Conducting interviews","Managing schedules","Developing software","Preparing financial reports"],ans:1,ex:"managing schedules = 管理行程，是職責之一。"},
+        {q:"How should applicants apply for the position?",ch:["Call the HR department","Submit an online form","Email resume and cover letter","Visit the office in person"],ans:2,ex:"send your resume and cover letter to hr@company.com = 寄履歷和求職信到email。"},
+        {q:"What will happen to unsuccessful applicants?",ch:["They will receive written feedback","They will be informed by phone","They will not be contacted","They may reapply immediately"],ans:2,ex:"Only shortlisted candidates will be contacted = 只有入選者才會被聯繫，其餘不通知。"}
+      ]},
     ],
-    grammar:[
-      {q:"Had the company invested earlier, it _____ a market leader by now.",ch:["would have become","will become","would become","had become"],ans:0,ex:"與過去事實相反的假設（第三條件句）：Had + p.p. ... would have + p.p.。",words:[{w:"invest",m:"投資"},{w:"market leader",m:"市場領導者"}]},
-      {q:"_____ with strong credentials, the applicant was immediately shortlisted.",ch:["Equipped","Equipment","To equip","Having equipped"],ans:0,ex:"分詞片語作狀語，主詞（申請人）是被動的，用過去分詞 Equipped。",words:[{w:"credentials",m:"資歷"},{w:"shortlist",m:"列入候選"}]},
-      {q:"The more effort you put in, _____ you will achieve.",ch:["the more","more","the most","most"],ans:0,ex:"the more...the more... 句型，表示「越…就越…」。",words:[{w:"effort",m:"努力"},{w:"achieve",m:"達成"}]},
-      {q:"The director insisted that the new policy _____ immediately.",ch:["be implemented","is implemented","was implemented","implement"],ans:0,ex:"insist that + 子句使用假設語氣（仮定法），動詞用原形：be implemented。",words:[{w:"implement",m:"執行、實施"},{w:"insist",m:"堅持"}]},
-      {q:"Rarely _____ such dedication in a new employee.",ch:["have we seen","we have seen","we saw","did we see"],ans:0,ex:"Rarely 置句首，主詞與助動詞倒裝：Rarely have we seen...。",words:[{w:"rarely",m:"鮮少"},{w:"dedication",m:"奉獻精神"}]}
+    mid: [
+      {passage:"MEMORANDUM\n\nTO: All Department Heads\nFROM: Operations Manager\nDATE: October 12\nRE: New Expense Reporting Procedure\n\nEffective November 1, all expense reports must be submitted using the new online portal at expenses.company.com. Paper submissions will no longer be accepted after October 31.\n\nAll reports must include original receipts or digital scans. Reimbursements will be processed within 10 business days of approval. Employees who submit reports after the 15th of each month may experience delays.\n\nA training session on using the new portal will be held on October 20 at 2:00 PM in Conference Room B. Attendance is strongly encouraged.",
+       qs:[
+        {q:"What is the main purpose of this memo?",ch:["To announce a new employee benefit","To introduce a change in expense reporting","To remind staff of a policy violation","To schedule a departmental meeting"],ans:1,ex:"RE: New Expense Reporting Procedure = 關於新的費用報告程序，主旨是介紹流程變更。"},
+        {q:"When will paper submissions no longer be accepted?",ch:["October 12","October 20","October 31","November 1"],ans:2,ex:"no longer accepted after October 31 = 10月31日之後不再接受紙本，即最後一天是31日。"},
+        {q:"What might happen if a report is submitted after the 15th?",ch:["It will be rejected","It will require resubmission","Processing may be delayed","The employee will be fined"],ans:2,ex:"may experience delays = 可能延遲處理。"},
+        {q:"The word 'reimbursements' in the memo is closest in meaning to",ch:["Payments back to employees","Requests for approval","Office supply orders","Budget allocations"],ans:0,ex:"reimbursement = 報銷、退款，指付還員工墊付的費用。"}
+      ]},
     ],
-    reading:[
-      {q:"Report excerpt: Despite robust Q3 earnings, the board expressed concern over increasing operational costs and suggested that management devise a cost-containment strategy before the annual review.\n\nWhat did the board suggest?",ch:["Increase earnings","Create a cost-control plan","Delay the annual review","Hire more managers"],ans:1,ex:"devise a cost-containment strategy = 制定成本控制策略。despite = 儘管，earnings = 收益。",words:[{w:"robust",m:"強勁的"},{w:"operational",m:"營運的"},{w:"devise",m:"制定"}]}
+    hard: [
+      {passage:"FOR IMMEDIATE RELEASE\n\nNovaTech Solutions Announces Strategic Partnership with Meridian Logistics\n\nSAN FRANCISCO, CA — NovaTech Solutions, a leading provider of supply chain software, announced today a strategic partnership with Meridian Logistics, one of the largest freight management companies in North America.\n\nUnder the agreement, NovaTech's AI-driven platform will be integrated into Meridian's existing infrastructure, enabling real-time shipment tracking, predictive analytics, and automated customs documentation.\n\nNovaTech CEO James Park stated that the collaboration represents a significant milestone, noting that the combined capabilities will reduce clients' logistics costs by an estimated 20 to 30 percent.\n\nMeridian's COO, Rachel Torres, emphasized that the integration is expected to be completed within six months, following a phased deployment approach to minimize operational disruption.\n\nShares of NovaTech rose 4.2% following the announcement.",
+       qs:[
+        {q:"What is the primary focus of the announcement?",ch:["NovaTech's quarterly earnings report","A new product launch by Meridian","A partnership between two companies","NovaTech's acquisition of Meridian"],ans:1,ex:"announces strategic partnership with = 宣布策略合作，不是收購也不是單純產品發布。"},
+        {q:"According to the press release, what benefit will clients receive?",ch:["Free customs documentation services","Reduced logistics costs","Faster delivery guarantees","Expanded warehouse access"],ans:1,ex:"reduce clients' logistics costs by 20 to 30 percent = 降低客戶物流成本。"},
+        {q:"What does Rachel Torres indicate about the integration timeline?",ch:["It will take longer than expected","It will be completed in phases over six months","It has already been partially completed","It depends on regulatory approval"],ans:1,ex:"completed within six months, following a phased deployment = 六個月內分階段完成。"},
+        {q:"The phrase 'minimize operational disruption' suggests that the companies are concerned about",ch:["Reducing employee overtime","Avoiding interruptions to current business","Lowering integration costs","Meeting investor expectations"],ans:1,ex:"minimize disruption to operations = 盡量避免對現有業務造成中斷。"},
+        {q:"What happened to NovaTech's stock price after the announcement?",ch:["It fell by 4.2%","It remained unchanged","It increased by 4.2%","The article does not mention it"],ans:2,ex:"Shares of NovaTech rose 4.2% = 股價上漲4.2%。"}
+      ]},
     ]
   }
-},
-travel:{
-  easy:{
-    vocab:[
-      {q:"Please proceed to _____ B12 for boarding.",ch:["gate","door","exit","hall"],ans:0,ex:"gate = 登機門，機場常見術語。proceed to = 前往。",words:[{w:"proceed",m:"前往；繼續"},{w:"boarding",m:"登機"}]},
-      {q:"Please fasten your _____ during takeoff.",ch:["seatbelt","luggage","ticket","passport"],ans:0,ex:"fasten your seatbelt = 繫緊安全帶，飛機起飛前廣播必說。",words:[{w:"fasten",m:"繫緊"},{w:"takeoff",m:"起飛"}]},
-      {q:"Do you have anything to _____?",ch:["declare","decorate","decrease","decide"],ans:0,ex:"Do you have anything to declare? = 有東西要申報嗎？（海關問句）",words:[{w:"declare",m:"申報"},{w:"customs",m:"海關"}]},
-      {q:"My _____ arrives at 9 PM.",ch:["flight","fight","fright","slight"],ans:0,ex:"flight = 班機、航班，注意與 fight（打架）區別。",words:[{w:"arrive",m:"抵達"},{w:"PM",m:"下午"}]},
-      {q:"Could I have a _____ seat, please?",ch:["window","mirror","glass","view"],ans:0,ex:"window seat = 靠窗座位；aisle seat = 靠走道座位。",words:[{w:"seat",m:"座位"},{w:"aisle",m:"走道"}]}
-    ],
-    grammar:[
-      {q:"The flight to Tokyo _____ at 10 AM tomorrow.",ch:["departs","departed","has departed","departing"],ans:0,ex:"固定時刻表用現在簡單式：The flight departs at 10 AM（排定出發）。",words:[{w:"depart",m:"出發"},{w:"tomorrow",m:"明天"}]},
-      {q:"Passengers _____ requested to board in groups.",ch:["are","is","be","were"],ans:0,ex:"Passengers（複數）+ are（被動現在式）= 乘客們被要求...。",words:[{w:"passenger",m:"乘客"},{w:"board",m:"登機"}]},
-    ],
-    reading:[
-      {q:"Announcement: Due to adverse weather, Flight BR123 has been delayed by two hours. Passengers should remain in the terminal. Updates will be provided every 30 minutes.\n\nWhy was the flight delayed?",ch:["Technical issue","Weather conditions","Staff shortage","Customs check"],ans:1,ex:"adverse weather = 惡劣天氣。remain in the terminal = 留在航廈內。",words:[{w:"adverse",m:"惡劣的"},{w:"remain",m:"留在"},{w:"terminal",m:"航廈"}]}
-    ]
-  },
-  mid:{
-    vocab:[
-      {q:"The airline _____ compensation for the 12-hour delay.",ch:["offered","ordered","operated","opposed"],ans:0,ex:"offer compensation = 提供補償，延誤12小時的補償說法。",words:[{w:"compensation",m:"補償"},{w:"delay",m:"延誤"}]},
-      {q:"Your baggage _____ has exceeded the limit.",ch:["allowance","alliance","assignment","allotment"],ans:0,ex:"baggage allowance = 行李限額，超過限制要付超重費。",words:[{w:"exceed",m:"超過"},{w:"limit",m:"限制"}]},
-      {q:"The hotel offers a complimentary _____ to the airport.",ch:["shuttle","shelter","shutter","scatter"],ans:0,ex:"shuttle = 接駁車。complimentary shuttle = 免費接駁服務。",words:[{w:"complimentary",m:"免費的"},{w:"offer",m:"提供"}]},
-    ],
-    grammar:[],
-    reading:[
-      {q:"Hotel policy: Check-in time is 3:00 PM. Early check-in is subject to availability and may incur an additional fee. Late check-out requests must be submitted by 10:00 AM on the day of departure.\n\nWhen must late check-out be requested?",ch:["3 PM on arrival","By 10 AM on departure day","During check-in","Anytime"],ans:1,ex:"must be submitted by 10 AM on the day of departure = 退房當天上午10點前提出。",words:[{w:"subject to",m:"視…而定"},{w:"incur",m:"產生（費用）"},{w:"departure",m:"離開"}]}
-    ]
-  },
-  hard:{
-    vocab:[
-      {q:"The airline's _____ policy allows one carry-on and one personal item.",ch:["carry-on","cabin baggage","hand luggage allowance","overhead locker"],ans:2,ex:"hand luggage allowance = 手提行李限額，是正式政策用語。",words:[{w:"allowance",m:"配額、限額"},{w:"personal item",m:"個人物品"}]},
-    ],
-    grammar:[
-      {q:"Not until the plane landed _____ the passengers able to turn on their phones.",ch:["were","are","did","was"],ans:0,ex:"Not until 置句首倒裝：Not until + clause + were + subject + adjective。",words:[{w:"land",m:"降落"},{w:"turn on",m:"開啟"}]}
-    ],
-    reading:[
-      {q:"Itinerary note: The pre-departure lounge is exclusively accessible to business and first-class passengers holding same-day boarding passes. Premium members of affiliated airlines may access the lounge upon presenting valid membership cards.\n\nWho can access the lounge?",ch:["All passengers","Economy class only","Business/first class + premium members","Staff only"],ans:2,ex:"exclusively accessible to business and first-class passengers = 僅限商務/頭等艙；Premium members = 合作航空貴賓會員。",words:[{w:"exclusively",m:"僅限"},{w:"affiliated",m:"合作的"},{w:"valid",m:"有效的"}]}
-    ]
-  }
-},
-biz:{
-  easy:{
-    vocab:[
-      {q:"Please _____ the report by Friday.",ch:["submit","summit","summon","support"],ans:0,ex:"submit a report = 提交報告，職場基本用語。",words:[{w:"report",m:"報告"},{w:"by Friday",m:"在週五之前"}]},
-      {q:"The meeting is _____ for 3 PM.",ch:["scheduled","schooled","scaled","selected"],ans:0,ex:"be scheduled for = 排定在…，meeting is scheduled for 3 PM = 會議排在下午三點。",words:[{w:"meeting",m:"會議"},{w:"scheduled",m:"安排好的"}]},
-      {q:"I will _____ you tomorrow morning.",ch:["contact","count","confirm","contain"],ans:0,ex:"contact you = 聯繫你，職場常見說法。",words:[{w:"tomorrow",m:"明天"},{w:"morning",m:"早上"}]},
-    ],
-    grammar:[
-      {q:"The manager _____ the new policy yesterday.",ch:["announced","announce","announces","announcing"],ans:0,ex:"yesterday（昨天）→ 過去式，announce → announced。",words:[{w:"manager",m:"主管"},{w:"policy",m:"政策"}]},
-    ],
-    reading:[
-      {q:"Memo: All staff are reminded to complete the online safety training by the end of this month. Failure to do so may result in restricted access to the system.\n\nWhat happens if staff don't complete the training?",ch:["They get a bonus","System access may be restricted","They must attend a class","They will be fired"],ans:1,ex:"failure to do so = 未完成的話，restricted access = 限制使用系統。",words:[{w:"remind",m:"提醒"},{w:"restricted",m:"受限的"},{w:"failure",m:"失敗、未能"}]}
-    ]
-  },
-  mid:{
-    vocab:[
-      {q:"We need to _____ a solution before the client meeting.",ch:["finalize","fertilize","formalize","familiarize"],ans:0,ex:"finalize a solution = 敲定/確定解決方案，職場常用詞。",words:[{w:"solution",m:"解決方案"},{w:"client",m:"客戶"}]},
-      {q:"The proposal was well-received by the _____.",ch:["stakeholders","stockholders","shareholders","all are possible"],ans:3,ex:"stakeholders（利益相關者）、stockholders/shareholders（股東）都是正確說法，視情境而定。",words:[{w:"proposal",m:"提案"},{w:"well-received",m:"受歡迎的"}]},
-      {q:"Please _____ this document before signing.",ch:["review","revise","renew","reveal"],ans:0,ex:"review a document = 審閱文件，signing（簽名）前要先閱讀。",words:[{w:"document",m:"文件"},{w:"sign",m:"簽名"}]},
-    ],
-    grammar:[
-      {q:"The new system _____ by the IT team last week.",ch:["was installed","installed","has installed","installing"],ans:0,ex:"上週（last week）被動式過去式：was + p.p.（installed）。",words:[{w:"install",m:"安裝"},{w:"IT team",m:"資訊部門"}]},
-      {q:"Could you _____ me the updated figures by noon?",ch:["send","sends","sent","sending"],ans:0,ex:"Could you + 動詞原形 = 請問你能…？禮貌請求句型。",words:[{w:"updated",m:"最新的"},{w:"figure",m:"數字"},{w:"noon",m:"正午"}]},
-    ],
-    reading:[
-      {q:"The quarterly earnings report shows a 15% revenue increase compared to the same period last year. However, operating expenses also rose by 20%, resulting in a narrower profit margin.\n\nWhat is the main concern mentioned in the report?",ch:["Revenue decreased","Expenses rose more than revenue","Profit margin widened","Sales targets were not met"],ans:1,ex:"operating expenses rose 20% vs revenue 15% → expenses grew faster → profit margin narrowed（利潤空間縮小）。",words:[{w:"quarterly",m:"每季的"},{w:"operating expenses",m:"營運費用"},{w:"profit margin",m:"利潤空間"}]}
-    ]
-  },
-  hard:{
-    vocab:[
-      {q:"The acquisition will be _____ pending regulatory approval.",ch:["finalized","forecasted","facilitated","franchised"],ans:0,ex:"finalized pending approval = 待監管機構批准後完成收購。pending = 等待期間。",words:[{w:"acquisition",m:"收購"},{w:"regulatory",m:"監管的"},{w:"pending",m:"待…期間"}]},
-      {q:"To remain competitive, the firm must _____ its core competencies.",ch:["leverage","lessen","lengthen","lapse"],ans:0,ex:"leverage core competencies = 善用核心能力，商業策略常見詞彙。",words:[{w:"competitive",m:"有競爭力的"},{w:"core competency",m:"核心能力"}]},
-    ],
-    grammar:[
-      {q:"The figures, _____ presented to the board last quarter, have since been revised.",ch:["which were","that was","who were","what were"],ans:0,ex:"非限定性關係子句用 which（逗號後），figures 是事物，且是複數故用 were。",words:[{w:"figures",m:"數據"},{w:"revised",m:"修訂的"}]},
-    ],
-    reading:[
-      {q:"Investor briefing: While the domestic market has shown signs of saturation, international expansion remains a viable avenue for growth. Management is exploring strategic partnerships in Southeast Asia, with pilot programs expected to launch in Q2.\n\nWhat is management's growth strategy?",ch:["Cut domestic operations","Expand internationally via partnerships","Launch new domestic products","Reduce headcount"],ans:1,ex:"international expansion via strategic partnerships = 通過戰略合作夥伴進行國際擴張。Southeast Asia pilot programs = 東南亞試點計畫。",words:[{w:"saturation",m:"飽和"},{w:"viable",m:"可行的"},{w:"partnership",m:"夥伴關係"}]}
-    ]
-  }
-},
-food:{
-  easy:{
-    vocab:[
-      {q:"Could I see the _____, please?",ch:["menu","memo","medal","media"],ans:0,ex:"Could I see the menu? = 可以給我菜單嗎？餐廳基本用語。",words:[{w:"menu",m:"菜單"},{w:"please",m:"請（禮貌用語）"}]},
-      {q:"I'd like to _____ a table for two.",ch:["reserve","reverse","revise","restore"],ans:0,ex:"reserve a table = 訂位（餐廳）；reserve = 預訂、保留。",words:[{w:"table",m:"桌子"},{w:"for two",m:"兩人"}]},
-      {q:"The soup is too _____ for me.",ch:["spicy","spicy-hot","peppered","burning"],ans:0,ex:"spicy = 辣的，形容食物口味常用詞。",words:[{w:"soup",m:"湯"},{w:"too",m:"太...了"}]},
-      {q:"May I take your _____ now?",ch:["order","offer","option","opinion"],ans:0,ex:"May I take your order? = 可以幫您點餐了嗎？侍者常說。",words:[{w:"order",m:"點餐；命令"},{w:"take",m:"記下"}]},
-    ],
-    grammar:[],
-    reading:[
-      {q:"Sign: This restaurant operates on a first-come, first-served basis. Reservations are not accepted. Opening hours: 11 AM – 9 PM daily.\n\nHow does this restaurant handle customers?",ch:["By reservation only","First come, first served","By appointment","Online booking only"],ans:1,ex:"first-come, first-served = 先到先得，不接受預約（reservations are not accepted）。",words:[{w:"operate",m:"運作"},{w:"reservation",m:"預約"},{w:"basis",m:"原則"}]}
-    ]
-  },
-  mid:{
-    vocab:[
-      {q:"The restaurant is known for its _____ cuisine.",ch:["signature","signal","similar","slight"],ans:0,ex:"signature cuisine = 招牌料理，signature = 獨特的、標誌性的。",words:[{w:"cuisine",m:"料理；烹飪"},{w:"known for",m:"以…著名"}]},
-      {q:"Could you _____ the bill, please?",ch:["split","spit","spin","spoil"],ans:0,ex:"split the bill = 分開付帳（AA制），餐廳常見說法。",words:[{w:"bill",m:"帳單"},{w:"could you",m:"能否請你"}]},
-    ],
-    grammar:[],
-    reading:[
-      {q:"Review: The service was impeccable and the ambiance was cozy. However, the portion sizes were smaller than expected for the price point, which left some diners feeling unsatisfied.\n\nWhat was the main criticism in the review?",ch:["Poor service","Small portions relative to price","Bad atmosphere","Slow delivery"],ans:1,ex:"portion sizes were smaller than expected for the price = 以那個價格來說份量偏少。impeccable = 無可挑剔的。",words:[{w:"impeccable",m:"無可挑剔的"},{w:"ambiance",m:"氛圍"},{w:"portion",m:"份量"}]}
-    ]
-  },
-  hard:{
-    vocab:[
-      {q:"The chef sources only _____ ingredients from local farms.",ch:["seasonal","ceremonial","sensational","sequential"],ans:0,ex:"seasonal ingredients = 當季食材。source from = 從…採購。",words:[{w:"ingredient",m:"食材"},{w:"source",m:"採購；來源"}]},
-    ],
-    grammar:[],
-    reading:[
-      {q:"Policy: Customers who pre-order three or more days in advance are eligible for a 10% discount. Cancellations made within 24 hours of the reservation will incur a 50% cancellation fee.\n\nA customer cancels their reservation 6 hours before arrival. What fee applies?",ch:["No fee","10% discount","50% cancellation fee","Full refund"],ans:2,ex:"within 24 hours → 50% cancellation fee。6 hours before = 24小時內，所以收取50%取消費。",words:[{w:"eligible",m:"符合資格的"},{w:"cancellation",m:"取消"},{w:"incur",m:"產生"}]}
-    ]
-  }
-},
-medical:{
-  easy:{
-    vocab:[
-      {q:"I have a _____ and a sore throat.",ch:["fever","flavor","favor","lever"],ans:0,ex:"fever = 發燒，sore throat = 喉嚨痛，感冒常見症狀。",words:[{w:"sore throat",m:"喉嚨痛"},{w:"fever",m:"發燒"}]},
-      {q:"You should take this _____ three times a day.",ch:["medicine","medium","median","media"],ans:0,ex:"take medicine = 吃藥，three times a day = 一天三次。",words:[{w:"take",m:"服用"},{w:"three times a day",m:"一天三次"}]},
-      {q:"Please make an _____ with the doctor.",ch:["appointment","apartment","appearance","application"],ans:0,ex:"make an appointment = 預約（看診），與 apply（申請）注意區分。",words:[{w:"doctor",m:"醫生"},{w:"make",m:"安排"}]},
-    ],
-    grammar:[],
-    reading:[
-      {q:"Prescription label: Take one tablet twice daily after meals. Do not take on an empty stomach. If symptoms persist, consult your physician.\n\nWhen should this medicine be taken?",ch:["Before meals","After meals","On an empty stomach","Once a day"],ans:1,ex:"after meals = 飯後服用。Do not take on an empty stomach = 不要空腹服用。",words:[{w:"tablet",m:"藥片"},{w:"persist",m:"持續"},{w:"physician",m:"醫師"}]}
-    ]
-  },
-  mid:{
-    vocab:[
-      {q:"The patient was _____ for three days after the surgery.",ch:["hospitalized","hospitality","hospitable","hosting"],ans:0,ex:"hospitalized = 住院（動詞被動式），surgery = 手術。",words:[{w:"patient",m:"病人"},{w:"surgery",m:"手術"}]},
-      {q:"The doctor _____ antibiotics for the infection.",ch:["prescribed","presented","prevented","preserved"],ans:0,ex:"prescribe antibiotics = 開立抗生素，prescribe = 開處方。",words:[{w:"antibiotics",m:"抗生素"},{w:"infection",m:"感染"}]},
-    ],
-    grammar:[],
-    reading:[
-      {q:"Health advisory: Individuals over 65 and those with underlying conditions are strongly encouraged to receive the annual flu vaccination. Clinics offering the vaccine are open Monday through Friday, 8 AM to 5 PM.\n\nWho is this advisory primarily targeting?",ch:["All age groups","Children under 10","Elderly and high-risk groups","Healthcare workers"],ans:2,ex:"over 65 + those with underlying conditions = 高齡及有潛在疾病者 = 高風險族群。",words:[{w:"underlying",m:"潛在的"},{w:"vaccination",m:"疫苗接種"},{w:"advisory",m:"公告；建議"}]}
-    ]
-  },
-  hard:{
-    vocab:[
-      {q:"The new drug showed _____ results in reducing inflammation.",ch:["promising","prompting","proposing","providing"],ans:0,ex:"promising results = 有前途的/令人期待的結果，inflammation = 發炎。",words:[{w:"inflammation",m:"發炎"},{w:"promising",m:"有前景的"}]},
-    ],
-    grammar:[],
-    reading:[
-      {q:"Clinical trial report: The experimental compound demonstrated a statistically significant reduction in LDL cholesterol levels among participants with hyperlipidemia, with minimal reported adverse effects over the 12-week observation period.\n\nWhat was the main finding?",ch:["Drug caused side effects","LDL levels significantly reduced","HDL levels increased","Trial was inconclusive"],ans:1,ex:"statistically significant reduction in LDL = LDL顯著降低。minimal adverse effects = 副作用極少。",words:[{w:"compound",m:"化合物"},{w:"hyperlipidemia",m:"高血脂症"},{w:"adverse",m:"不良的"}]}
-    ]
-  }
-},
-school:{
-  easy:{
-    vocab:[
-      {q:"The homework is _____ tomorrow.",ch:["due","dew","do","done"],ans:0,ex:"due = 到期的、應繳交的。The homework is due tomorrow = 作業明天要交。",words:[{w:"homework",m:"家庭作業"},{w:"tomorrow",m:"明天"}]},
-      {q:"She received a scholarship to study _____.",ch:["abroad","aboard","about","abrupt"],ans:0,ex:"study abroad = 出國讀書，scholarship = 獎學金。",words:[{w:"scholarship",m:"獎學金"},{w:"receive",m:"收到"}]},
-      {q:"The professor _____ the lecture notes online.",ch:["posted","hosted","costed","boasted"],ans:0,ex:"post notes online = 把筆記發布到網路上。",words:[{w:"lecture",m:"講課"},{w:"notes",m:"筆記"}]},
-    ],
-    grammar:[],
-    reading:[
-      {q:"Announcement: The school library will extend its opening hours during exam week. It will be open from 7 AM to midnight from Monday through Saturday.\n\nWhat change is being made during exam week?",ch:["Library will be closed","Hours are extended","Only students can enter","New books will arrive"],ans:1,ex:"extend its opening hours = 延長開放時間。from 7 AM to midnight = 從早上7點到午夜。",words:[{w:"extend",m:"延長"},{w:"midnight",m:"午夜"},{w:"exam",m:"考試"}]}
-    ]
-  },
-  mid:{
-    vocab:[
-      {q:"Students must _____ their thesis by the end of the semester.",ch:["defend","defeat","defer","define"],ans:0,ex:"defend a thesis = 論文口試/答辯，學術用語。",words:[{w:"thesis",m:"論文"},{w:"semester",m:"學期"}]},
-      {q:"The course requires students to _____ peer evaluations.",ch:["conduct","conflict","contact","contrast"],ans:0,ex:"conduct peer evaluations = 進行同儕評量，conduct = 執行、進行。",words:[{w:"peer",m:"同儕"},{w:"evaluation",m:"評量"}]},
-    ],
-    grammar:[],
-    reading:[
-      {q:"Syllabus note: Attendance accounts for 10% of the final grade. Students who miss more than three classes without a valid excuse will have their grade deducted accordingly.\n\nWhat happens if a student misses more than 3 classes?",ch:["They fail automatically","Grade is deducted","Extra assignments required","They must retake the course"],ans:1,ex:"grade deducted accordingly = 依情況扣分。valid excuse = 正當理由。",words:[{w:"syllabus",m:"課程大綱"},{w:"attendance",m:"出席"},{w:"deduct",m:"扣除"}]}
-    ]
-  },
-  hard:{
-    vocab:[
-      {q:"The university's curriculum was _____ to meet industry demands.",ch:["revamped","revoked","revered","reversed"],ans:0,ex:"revamp = 徹底改革、翻新。revamp curriculum = 重新設計課程架構。",words:[{w:"curriculum",m:"課程"},{w:"industry demands",m:"產業需求"}]},
-    ],
-    grammar:[],
-    reading:[
-      {q:"Academic policy: Plagiarism, defined as the uncited use of another's intellectual work, constitutes a serious violation of academic integrity. Students found guilty may face penalties ranging from a failing grade to expulsion.\n\nWhat is the most severe consequence of plagiarism?",ch:["Warning letter","Reduced grade","Expulsion","Mandatory workshop"],ans:2,ex:"penalties ranging from failing grade to expulsion = 最嚴重是被開除（expulsion）。plagiarism = 抄襲。",words:[{w:"plagiarism",m:"抄襲"},{w:"expulsion",m:"開除"},{w:"integrity",m:"誠信"}]}
-    ]
-  }
-}
 };
+
+// ── Helper: get fallback questions ──────────────────────────────────────
+function getFallbackList(){
+  return FALLBACK_QB[quizPart]?.[quizDiff] || FALLBACK_QB.p5.easy;
+}
 
 // ===== WORD DATA FOR GAMES =====
 const gameWords=[
@@ -796,186 +730,433 @@ function showWordBox(w){
 }
 
 // ======= QUIZ =======
-// ===== AI QUIZ ENGINE =====
-// aiQueue: buffer of AI-generated questions
-// seenHashes: dedup set so AI never repeats
+// ===== QUIZ ENGINE v3 — Part5/6/7 + Custom QB + AI =====
+
+// State
+let quizPart = 'p5';       // p5 | p6 | p7
+let quizDiff = 'easy';
+let quizSrc  = 'ai';       // ai | custom
+let quizIdx  = 0;
+let quizAnswered = false;
+let totalAnswered = 0;
+let sessionCorrect = 0;
+
+// AI queue & dedup
 let aiQueue = [];
 let aiGenerating = false;
 let seenHashes = new Set(JSON.parse(localStorage.getItem('eb_seen')||'[]'));
-let totalAnswered = 0;
 
-function qKey(cat,diff,type){ return cat+'|'+diff+'|'+type; }
+// Custom question bank stored in localStorage
+const CQB_KEY = 'eb_customqb';
+function loadCQB(){ return JSON.parse(localStorage.getItem(CQB_KEY)||'{"p5":{"easy":[],"mid":[],"hard":[]},"p6":{"easy":[],"mid":[],"hard":[]},"p7":{"easy":[],"mid":[],"hard":[]}}'); }
+function saveCQB(db){ localStorage.setItem(CQB_KEY, JSON.stringify(db)); }
 
-function getQList(){
-  // Return builtin bank as offline fallback
-  const bank=QB[quizCat]?.[quizDiff]?.[quizType];
-  if(bank&&bank.length) return bank;
-  for(const cat of Object.keys(QB)){
-    const b=QB[cat]?.[quizDiff]?.[quizType];
-    if(b&&b.length) return b;
-  }
-  return QB.daily.easy.vocab;
+// ── Labels ──────────────────────────────────────────────────────────────────
+const PART_LABEL = { p5:'Part 5｜句子填空', p6:'Part 6｜段落填空', p7:'Part 7｜閱讀測驗' };
+const DIFF_LABEL = { easy:'⭐ 簡單', mid:'⭐⭐ 普通', hard:'⭐⭐⭐ 困難' };
+
+// ── Hash for dedup ────────────────────────────────────────────────────────
+function hashQ(q){
+  const s = q.passage ? q.passage.slice(0,40) : (q.q||'').slice(0,40);
+  return btoa(unescape(encodeURIComponent(s))).slice(0,20);
 }
 
-function hashQ(q){ return btoa(unescape(encodeURIComponent(q.q))).slice(0,20); }
+// ── Render helpers ────────────────────────────────────────────────────────
+function setQuizTags(isAI){
+  document.getElementById('quizTagPart').textContent = PART_LABEL[quizPart];
+  document.getElementById('quizTagDiff').textContent = DIFF_LABEL[quizDiff];
+  const srcEl = document.getElementById('quizTagSrc');
+  if(isAI){
+    srcEl.textContent = '🤖 AI仿真題';
+    srcEl.style.cssText = 'background:#fef3c7;color:#92400e;border:1px solid #fcd34d';
+  } else {
+    srcEl.textContent = '📂 自訂題庫';
+    srcEl.style.cssText = 'background:#dcfce7;color:#166534;border:1px solid #86efac';
+  }
+  document.getElementById('quizCount').textContent = '第 '+(totalAnswered+1)+' 題';
+  document.getElementById('quizSessionStat').textContent =
+    totalAnswered > 0 ? `本次 ${sessionCorrect}/${totalAnswered} 答對` : '';
+}
 
-function renderQuizCard(q, isAI){
-  quizAnswered=false;
-  const catNames={daily:'日常生活',travel:'搭機/旅遊',biz:'職場/商務',food:'餐廳/購物',medical:'醫療/健康',school:'學校/教育'};
-  const diffNames={easy:'⭐ 簡單',mid:'⭐⭐ 普通',hard:'⭐⭐⭐ 困難'};
-  const typeNames={vocab:'單字',grammar:'語彙',reading:'閱讀'};
-  document.getElementById('quizTagCat').textContent=catNames[quizCat];
-  document.getElementById('quizTagDiff').textContent=diffNames[quizDiff];
-  document.getElementById('quizTagType').textContent=typeNames[quizType];
-  document.getElementById('quizCount').textContent='第 '+(totalAnswered+1)+' 題'+(isAI?' 🤖':'');
-  document.getElementById('quizProg').style.width='100%';
-  document.getElementById('quizQ').textContent=q.q;
+function showQuizLoading(){
+  document.getElementById('quizFillArea').classList.remove('hidden');
+  document.getElementById('quizReadArea').classList.add('hidden');
+  document.getElementById('quizQ').textContent = 'AI 出題中...';
+  document.getElementById('quizOpts').innerHTML =
+    '<div style="grid-column:span 2;text-align:center;padding:20px;color:var(--muted)">' +
+    '<div class="dot-loader" style="justify-content:center"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>' +
+    '<div style="margin-top:8px;font-size:12px">AI 正在依照真實多益格式生成題目...</div></div>';
   document.getElementById('quizExplain').classList.add('hidden');
-  const wc=document.getElementById('quizWordChips'); wc.innerHTML='';
-  const opts=document.getElementById('quizOpts'); opts.innerHTML='';
-  q.ch.forEach((c,i)=>{
-    const b=document.createElement('button');b.className='opt';
-    b.textContent=String.fromCharCode(65+i)+'. '+c;
-    b.onclick=()=>answerQ(i,q.ans,q.ex,q.words);
+  document.getElementById('quizWordChips').innerHTML = '';
+}
+
+// ── Part 5 / 6 render ────────────────────────────────────────────────────
+function renderFillQ(q, isAI){
+  quizAnswered = false;
+  setQuizTags(isAI);
+  document.getElementById('quizFillArea').classList.remove('hidden');
+  document.getElementById('quizReadArea').classList.add('hidden');
+  document.getElementById('quizExplain').classList.add('hidden');
+  document.getElementById('quizWordChips').innerHTML = '';
+
+  // Show passage for Part 6
+  const qEl = document.getElementById('quizQ');
+  if(q.passage){
+    qEl.innerHTML = '<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:12.5px;line-height:1.8;margin-bottom:10px;white-space:pre-wrap">'+
+      q.passage.replace(/\n/g,'<br>')+'</div>' +
+      '<div style="font-size:13px;font-weight:500;margin-bottom:4px">'+
+      (q.q||'').replace(/-------/g,'<span style="border-bottom:2px solid var(--primary);color:var(--primary);padding:0 12px">_______</span>')+'</div>';
+  } else {
+    qEl.innerHTML = (q.q||'').replace(/-------/g,
+      '<span style="border-bottom:2px solid var(--primary);color:var(--primary);font-weight:600;padding:0 8px">_______</span>');
+  }
+
+  const opts = document.getElementById('quizOpts');
+  opts.innerHTML = '';
+  (q.ch||[]).forEach((c,i)=>{
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.innerHTML = '<span style="font-weight:700;margin-right:4px">'+String.fromCharCode(65+i)+'.</span> '+c;
+    b.onclick = () => answerFill(i, q.ans, q.ex, q.words);
     opts.appendChild(b);
   });
 }
 
-function showQuizLoading(){
-  document.getElementById('quizQ').textContent='AI 出題中...';
-  document.getElementById('quizOpts').innerHTML='<div style="grid-column:span 2;text-align:center;padding:20px;color:var(--muted)"><div class="dot-loader" style="justify-content:center"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><div style="margin-top:8px;font-size:12px">正在生成高品質題目，請稍候...</div></div>';
-  document.getElementById('quizExplain').classList.add('hidden');
-  document.getElementById('quizWordChips').innerHTML='';
+function answerFill(chosen, correct, ex, words){
+  if(quizAnswered) return;
+  quizAnswered = true;
+  totalAnswered++; if(chosen===correct) sessionCorrect++;
+  recordStat();
+  const opts = document.getElementById('quizOpts').children;
+  opts[correct].classList.add('ok');
+  if(chosen !== correct) opts[chosen].classList.add('ng');
+  const exEl = document.getElementById('quizExplain');
+  exEl.innerHTML = ex || '';
+  exEl.classList.remove('hidden');
+  renderWordChips(words);
+  document.getElementById('quizSessionStat').textContent = `本次 ${sessionCorrect}/${totalAnswered} 答對`;
+  if(aiQueue.length < 3) prefetchAI();
 }
 
+// ── Part 7 render ────────────────────────────────────────────────────────
+let p7SubAnswered = 0;
+
+function renderP7(q, isAI){
+  quizAnswered = false;
+  p7SubAnswered = 0;
+  setQuizTags(isAI);
+  document.getElementById('quizFillArea').classList.add('hidden');
+  document.getElementById('quizReadArea').classList.remove('hidden');
+  document.getElementById('quizExplain').classList.add('hidden');
+  document.getElementById('quizWordChips').innerHTML = '';
+
+  document.getElementById('quizPassage').textContent = q.passage || '';
+
+  const subEl = document.getElementById('quizSubQs');
+  subEl.innerHTML = '';
+  (q.qs||[]).forEach((sq, qi)=>{
+    const div = document.createElement('div');
+    div.className = 'sub-q';
+    div.id = 'subq-'+qi;
+    div.innerHTML = '<div class="sub-q-text">Q'+(qi+1)+'. '+sq.q+'</div>' +
+      '<div class="sub-opts" id="sub-opts-'+qi+'"></div>' +
+      '<div class="explain-box hidden" id="sub-ex-'+qi+'" style="margin-top:6px"></div>';
+    subEl.appendChild(div);
+    const optsEl = div.querySelector('#sub-opts-'+qi);
+    (sq.ch||[]).forEach((c,i)=>{
+      const b = document.createElement('button');
+      b.className = 'opt';
+      b.innerHTML = '<span style="font-weight:700;margin-right:4px">'+String.fromCharCode(65+i)+'.</span> '+c;
+      b.onclick = () => answerSubQ(qi, i, sq.ans, sq.ex, q.qs.length);
+      optsEl.appendChild(b);
+    });
+  });
+}
+
+function answerSubQ(qi, chosen, correct, ex, total){
+  const optsEl = document.getElementById('sub-opts-'+qi);
+  if(!optsEl || optsEl.querySelector('.ok')) return; // already answered
+  const opts = optsEl.children;
+  opts[correct].classList.add('ok');
+  if(chosen !== correct) opts[chosen].classList.add('ng');
+  const exEl = document.getElementById('sub-ex-'+qi);
+  exEl.textContent = ex || '';
+  exEl.classList.remove('hidden');
+  p7SubAnswered++;
+  totalAnswered++; if(chosen===correct) sessionCorrect++;
+  recordStat();
+  document.getElementById('quizSessionStat').textContent = `本次 ${sessionCorrect}/${totalAnswered} 答對`;
+  if(aiQueue.length < 3) prefetchAI();
+}
+
+function renderWordChips(words){
+  const wc = document.getElementById('quizWordChips');
+  wc.innerHTML = '';
+  (words||[]).forEach(wo=>{
+    const c = document.createElement('div');
+    c.className = 'chip';
+    c.textContent = wo.w;
+    c.onclick = ()=>{ c.textContent = c.textContent===wo.w ? wo.w+' = '+wo.m : wo.w; };
+    wc.appendChild(c);
+  });
+}
+
+function spkQuiz(){
+  const t = quizPart === 'p7'
+    ? (document.getElementById('quizPassage').textContent||'').slice(0,300)
+    : document.getElementById('quizQ').textContent;
+  spk(t);
+}
+
+// ── Load next question ────────────────────────────────────────────────────
 function loadQ(){
-  // If AI queue has questions ready, use them
+  document.getElementById('quizProg').style.width = '100%';
+  document.getElementById('quizExplain').classList.add('hidden');
+  document.getElementById('quizWordChips').innerHTML = '';
+
+  // Custom source: use custom QB
+  if(quizSrc === 'custom'){
+    const db = loadCQB();
+    const list = db[quizPart]?.[quizDiff] || [];
+    if(!list.length){
+      document.getElementById('quizFillArea').classList.remove('hidden');
+      document.getElementById('quizReadArea').classList.add('hidden');
+      document.getElementById('quizQ').innerHTML = '<span style="color:var(--muted)">自訂題庫是空的，請先匯入題目，或切換到 AI仿真題。</span>';
+      document.getElementById('quizOpts').innerHTML = '';
+      return;
+    }
+    const q = list[quizIdx % list.length];
+    quizIdx++;
+    if(quizPart === 'p7') renderP7(q, false);
+    else renderFillQ(q, false);
+    return;
+  }
+
+  // AI source: use queue
   if(aiQueue.length > 0){
     const q = aiQueue.shift();
-    renderQuizCard(q, true);
-    // Pre-fetch more if queue is running low
+    if(quizPart === 'p7') renderP7(q, true);
+    else renderFillQ(q, true);
     if(aiQueue.length < 3) prefetchAI();
     return;
   }
-  // Fall back to builtin while AI loads
-  const list=getQList();
-  if(list.length > 0){
-    const q=list[quizIdx%list.length];
-    renderQuizCard(q, false);
+
+  // AI queue empty: try fallback first, then fetch
+  const fallback = getFallbackList();
+  if(fallback.length){
+    const q = fallback[quizIdx % fallback.length];
     quizIdx++;
-    // Also start fetching AI questions in background
-    if(!aiGenerating) prefetchAI();
+    if(quizPart === 'p7') renderP7(q, false);
+    else renderFillQ(q, false);
+    // Still kick off AI in background
+    if(!aiGenerating) prefetchAI(false);
     return;
   }
-  // No builtin either, show loading state
   showQuizLoading();
-  prefetchAI(true); // force immediate
+  prefetchAI(true);
 }
 
+// ── AI generation ─────────────────────────────────────────────────────────
 async function prefetchAI(immediate=false){
   if(aiGenerating) return;
-  // Don't prefetch if already have 8+ in queue
   if(!immediate && aiQueue.length >= 8) return;
   aiGenerating = true;
-  try {
-    const catNames={daily:'日常生活',travel:'搭機/旅遊',biz:'職場/商務',food:'餐廳/購物',medical:'醫療/健康',school:'學校/教育'};
-    const diffMap={easy:'初級（國中程度，句子簡單）',mid:'中級（高中程度，有商務詞彙）',hard:'高級（多益750+，有複雜文法與長篇閱讀）'};
-    const typeMap={vocab:'單字選擇題（考單字意思或用法）',grammar:'語彙文法題（考時態、介系詞、連接詞等）',reading:'閱讀理解題（給一小段公告/信件/說明，問內容）'};
-    const seen = [...seenHashes].slice(-100); // send last 100 to avoid repeat
 
-    const prompt = `你是多益（TOEIC）出題老師。請生成5道「${catNames[quizCat]}」主題的英文題目。
-難度：${diffMap[quizDiff]}
-題型：${typeMap[quizType]}
-目標對象：台灣學習者，母語是中文
+  const diffDesc = {
+    easy:  '初級（TOEIC 400-500分，句子簡單，常見日常詞彙）',
+    mid:   '中級（TOEIC 600-700分，商務詞彙，稍複雜文法）',
+    hard:  '高級（TOEIC 750-990分，進階語法，長篇閱讀，專業詞彙）'
+  };
 
-每題必須包含：
-- 題目句子（英文）
-- 4個選項（英文）
-- 正確答案索引（0-3）
-- 繁體中文解析（說明為什麼對、常見錯誤）
-- 2-4個題目中的重點單字（英文單字 + 繁體中文意思）
+  // Build part-specific prompt
+  let partPrompt = '';
+  let countN = 5;
+  if(quizPart === 'p5'){
+    partPrompt = `生成 ${countN} 題「Part 5 句子填空」。
+格式與真實多益完全一致：
+- 每題是一個完整英文句子，空格用 ------- 表示
+- 4個選項（通常考: 詞性變化/時態/介系詞/代名詞/連接詞）
+- 選項之間要有明顯干擾，不能一看就知道答案
+- 解析用繁體中文，說明考點和錯誤選項為何不對
+- words 欄位放題目中2-3個重點多益單字
+
+JSON格式（陣列，共${countN}題）：
+[{"q":"句子 -------。","ch":["A","B","C","D"],"ans":0,"ex":"繁體中文解析：考點是...","words":[{"w":"word","m":"中文"}]}]`;
+  } else if(quizPart === 'p6'){
+    partPrompt = `生成 1 篇「Part 6 段落填空」文章，含 4 道填空題。
+格式與真實多益完全一致：
+- 文章是一封商業 email 或公告或通知（150-200字）
+- 文章中有 4 處空格，用 ------- (1) ~ ------- (4) 標示
+- 每個空格對應一道題，共4題
+- 解析用繁體中文
+
+JSON格式（陣列，共1個物件，4題）：
+[{"passage":"文章內容 ------- (1) ...","qs":[{"q":"第1題題幹（通常是 Question 131: ）","ch":["A","B","C","D"],"ans":0,"ex":"解析"},{"q":"...","ch":["A","B","C","D"],"ans":1,"ex":"解析"},{"q":"...","ch":["A","B","C","D"],"ans":2,"ex":"解析"},{"q":"...","ch":["A","B","C","D"],"ans":1,"ex":"解析"}]}]`;
+    countN = 1;
+  } else {
+    partPrompt = `生成 2 篇「Part 7 閱讀測驗」文章，每篇含 3-5 道問題。
+格式與真實多益完全一致：
+- 文章類型：商業email / 公告 / 廣告 / 備忘錄 / 新聞稿（各篇不同類型）
+- 每篇文章長度 150-250 字
+- 問題考：主旨/細節/推論/詞義/NOT題 等不同題型
+- 解析用繁體中文，說明答案線索在文章哪裡
+
+JSON格式（陣列，共2篇）：
+[{"passage":"文章內容（可有換行）","qs":[{"q":"What is the purpose of this email?","ch":["A","B","C","D"],"ans":0,"ex":"解析"},...]},...]`;
+    countN = 2;
+  }
+
+  const seen = [...seenHashes].slice(-50);
+  const prompt = `你是多益（TOEIC）專業出題老師，熟悉ETS出題風格。
+難度：${diffDesc[quizDiff]}
+已出過的題目（請完全避開相似內容）：${seen.length ? seen.slice(-15).join(', ') : '無'}
+
+${partPrompt}
 
 嚴格規定：
-1. 題目不可以重複或相似（以下是已出過的題目摘要，請完全避開類似的：${seen.slice(-20).join(', ')||'無'})
-2. 閱讀題要有完整的情境段落（公告/備忘錄/email/廣告等）
-3. 單字題要有實用的多益常考詞彙
-4. 文法題要考實際職場/生活場景
+1. 只回傳 JSON 陣列，不含任何 markdown 或說明文字
+2. 英文要自然道地，符合商務/生活情境
+3. 題目不能有語病，選項長度要相近
+4. 解析必須說明「為什麼這個選項對」以及「其他選項錯在哪」
+5. ans 欄位（正確答案索引）必須均勻分佈在 0~3，不可全部是 0 或 1，五題中每個索引至少出現一次`;
 
-只回傳JSON陣列，不含任何markdown或說明文字：
-[{"q":"題目","ch":["A","B","C","D"],"ans":0,"ex":"繁體中文解析","words":[{"w":"word","m":"意思"}]}]`;
-
+  try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
+        max_tokens: 3000,
         messages: [{role:'user', content: prompt}]
       })
     });
     const data = await resp.json();
     const text = data.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
     const questions = JSON.parse(text);
-
     let added = 0;
     for(const q of questions){
-      if(!q.q || !q.ch || q.ch.length < 4) continue;
       const h = hashQ(q);
       if(seenHashes.has(h)) continue;
+      // Shuffle answer positions so correct answer isn't always index 0
+      if(q.ch && q.ans !== undefined){
+        const correctText = q.ch[q.ans];
+        const shuffled = q.ch.map((c,i)=>({c,orig:i})).sort(()=>Math.random()-0.5);
+        q.ch = shuffled.map(x=>x.c);
+        q.ans = shuffled.findIndex(x=>x.c===correctText);
+      }
+      // For P7 sub-questions, shuffle each sub-q too
+      if(q.qs){
+        q.qs = q.qs.map(sq=>{
+          if(!sq.ch || sq.ans===undefined) return sq;
+          const correctText = sq.ch[sq.ans];
+          const shuffled = sq.ch.map((c,i)=>({c,orig:i})).sort(()=>Math.random()-0.5);
+          return {...sq, ch: shuffled.map(x=>x.c), ans: shuffled.findIndex(x=>x.c===correctText)};
+        });
+      }
       aiQueue.push(q);
       seenHashes.add(h);
       added++;
     }
-    // Persist seen hashes (keep last 500)
     const arr = [...seenHashes].slice(-500);
     localStorage.setItem('eb_seen', JSON.stringify(arr));
 
-    // If we were showing loading state, render now
     if(immediate && added > 0){
       const q = aiQueue.shift();
-      renderQuizCard(q, true);
+      if(quizPart === 'p7') renderP7(q, true);
+      else renderFillQ(q, true);
       if(aiQueue.length < 3) prefetchAI();
     }
   } catch(e) {
-    console.warn('AI quiz fetch failed, using builtin:', e);
+    console.warn('AI fetch failed:', e);
     if(immediate){
-      // Show builtin as fallback
-      const list = getQList();
-      if(list.length) renderQuizCard(list[quizIdx%list.length], false);
+      document.getElementById('quizQ').innerHTML =
+        '<span style="color:var(--danger)">⚠️ AI 出題失敗（網路問題或未在 Claude.ai 開啟），請稍後再試。</span>';
+      document.getElementById('quizOpts').innerHTML = '';
     }
   }
   aiGenerating = false;
 }
 
-function answerQ(chosen,correct,ex,words){
-  if(quizAnswered) return;
-  quizAnswered=true;
-  totalAnswered++;
-  stat.quiz++; if(chosen===correct) stat.correct++;
-  if(!stat.cats[quizCat]) stat.cats[quizCat]={total:0,correct:0};
-  stat.cats[quizCat].total++; if(chosen===correct) stat.cats[quizCat].correct++;
+// ── Stats recording ───────────────────────────────────────────────────────
+function recordStat(){
+  stat.quiz++;
+  if(!stat.cats) stat.cats = {};
+  const k = quizPart+'_'+quizDiff;
+  if(!stat.cats[k]) stat.cats[k] = {total:0, correct:0, label: PART_LABEL[quizPart]+' '+DIFF_LABEL[quizDiff]};
+  stat.cats[k].total++;
   saveDB();
-  const opts=document.getElementById('quizOpts').children;
-  opts[correct].classList.add('ok');
-  if(chosen!==correct) opts[chosen].classList.add('ng');
-  const ex2=document.getElementById('quizExplain');
-  ex2.textContent=ex; ex2.classList.remove('hidden');
-  const wc=document.getElementById('quizWordChips');
-  (words||[]).forEach(wo=>{
-    const c=document.createElement('div');c.className='chip';
-    c.textContent=wo.w;
-    c.onclick=()=>{c.textContent=c.textContent===wo.w?wo.w+' = '+wo.m:wo.w;};
-    wc.appendChild(c);
-  });
-  // Pre-load next batch while user reads explanation
-  if(aiQueue.length < 3) prefetchAI();
 }
 
+// ── Next question ────────────────────────────────────────────────────────
 function nextQ(){
-  // Clear queue when settings change
   loadQ();
 }
 
+function resetQuiz(){
+  aiQueue = [];
+  aiGenerating = false;
+  quizIdx = 0;
+  loadQ();
+}
+
+// ── Custom QB import ─────────────────────────────────────────────────────
+function importCustomQB(){
+  const raw = document.getElementById('importJson').value.trim();
+  const part = document.getElementById('importPart').value;
+  const diff = document.getElementById('importDiff').value;
+  const msgEl = document.getElementById('importMsg');
+  try {
+    const arr = JSON.parse(raw);
+    if(!Array.isArray(arr)) throw new Error('必須是 JSON 陣列');
+    const db = loadCQB();
+    if(!db[part]) db[part] = {easy:[],mid:[],hard:[]};
+    if(!db[part][diff]) db[part][diff] = [];
+    db[part][diff].push(...arr);
+    saveCQB(db);
+    msgEl.innerHTML = '<span style="color:var(--success)">✅ 成功匯入 '+arr.length+' 題到 '+PART_LABEL[part]+' / '+DIFF_LABEL[diff]+'</span>';
+    document.getElementById('importJson').value = '';
+  } catch(e){
+    msgEl.innerHTML = '<span style="color:var(--danger)">❌ 格式錯誤：'+e.message+'</span>';
+  }
+}
+
+function downloadTemplate(){
+  const p5 = '[{"q":"The manager ------- the report before sending it to the client.","ch":["reviewed","reviews","review","reviewing"],"ans":0,"ex":"解析：過去式被動...","words":[{"w":"reviewed","m":"審閱"}]}]';
+  const p7 = '[{"passage":"To: All Staff\\nFrom: HR Department\\n\\nPlease be advised that the office will be closed on December 25 for the Christmas holiday...","qs":[{"q":"What is the purpose of this notice?","ch":["To announce a holiday","To schedule a meeting","To request a report","To introduce new staff"],"ans":0,"ex":"解析：purpose = 公告假日"}]}]';
+  const txt = '// Part 5 範本:\n'+p5+'\n\n// Part 7 範本:\n'+p7;
+  const a = document.createElement('a');
+  a.href = 'data:text/plain;charset=utf-8,'+encodeURIComponent(txt);
+  a.download = 'quiz_template.txt';
+  a.click();
+}
+
+function showQBManager(){
+  const db = loadCQB();
+  const el = document.getElementById('qbManagerList');
+  let html = '';
+  for(const part of ['p5','p6','p7']){
+    for(const diff of ['easy','mid','hard']){
+      const count = (db[part]?.[diff]||[]).length;
+      if(!count) continue;
+      html += `<div class="wb-row">
+        <div><div class="wb-en">${PART_LABEL[part]}</div><div class="wb-zh">${DIFF_LABEL[diff]} · ${count} 題</div></div>
+        <button class="btn sm danger" onclick="clearCustomPart('${part}','${diff}')">清除</button>
+      </div>`;
+    }
+  }
+  el.innerHTML = html || '<div style="color:var(--hint);padding:12px;text-align:center">還沒有自訂題庫</div>';
+  document.getElementById('qbManagerModal').classList.add('on');
+}
+
+function clearCustomPart(part, diff){
+  if(!confirm('確定清除 '+PART_LABEL[part]+' / '+DIFF_LABEL[diff]+'？')) return;
+  const db = loadCQB();
+  db[part][diff] = [];
+  saveCQB(db);
+  showQBManager();
+}
+
+// ── Tab handlers ──────────────────────────────────────────────────────────
 // Tab handlers — clear AI queue when settings change
 function resetQuiz(){
   aiQueue=[];
@@ -983,22 +1164,25 @@ function resetQuiz(){
   quizIdx=0;
   loadQ();
 }
-document.getElementById('quizCats').querySelectorAll('.ctab').forEach(el=>{
+// Part tabs
+document.getElementById('quizParts').querySelectorAll('.ctab').forEach(el=>{
   el.onclick=()=>{
-    document.getElementById('quizCats').querySelectorAll('.ctab').forEach(e=>e.classList.remove('on'));
-    el.classList.add('on'); quizCat=el.dataset.cat; resetQuiz();
+    document.getElementById('quizParts').querySelectorAll('.ctab').forEach(e=>e.classList.remove('on'));
+    el.classList.add('on'); quizPart=el.dataset.part; resetQuiz();
   };
 });
+// Difficulty tabs
 document.getElementById('quizDiffs').querySelectorAll('.diff-tab').forEach(el=>{
   el.onclick=()=>{
     document.getElementById('quizDiffs').querySelectorAll('.diff-tab').forEach(e=>{e.classList.remove('on','easy','mid','hard');});
     el.classList.add('on',el.dataset.diff); quizDiff=el.dataset.diff; resetQuiz();
   };
 });
-document.getElementById('quizTypes').querySelectorAll('.ctab').forEach(el=>{
+// Source tabs
+document.getElementById('quizSrcTabs').querySelectorAll('.ctab').forEach(el=>{
   el.onclick=()=>{
-    document.getElementById('quizTypes').querySelectorAll('.ctab').forEach(e=>e.classList.remove('on'));
-    el.classList.add('on'); quizType=el.dataset.type; resetQuiz();
+    document.getElementById('quizSrcTabs').querySelectorAll('.ctab').forEach(e=>e.classList.remove('on'));
+    el.classList.add('on'); quizSrc=el.dataset.src; resetQuiz();
   };
 });
 
