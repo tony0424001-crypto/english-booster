@@ -189,6 +189,29 @@ textarea.write-area:focus{border-color:var(--primary)}
 /* import textarea */
 #importJson:focus{border-color:var(--primary)}
 
+
+/* Word tooltip */
+.word-tip{position:relative;cursor:pointer;border-radius:3px;padding:0 2px;transition:background .15s}
+.word-tip:hover{background:#dbeafe}
+.word-tip .tip-bubble{
+  display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:#1e293b;color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;
+  white-space:nowrap;z-index:300;pointer-events:none;line-height:1.5;
+  box-shadow:0 2px 8px rgba(0,0,0,.25);
+}
+.word-tip .tip-bubble::after{
+  content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  border:5px solid transparent;border-top-color:#1e293b;
+}
+.word-tip:hover .tip-bubble{display:block}
+
+/* Translation row */
+.trans-row{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.trans-btn{padding:3px 10px;font-size:11px;border:1px solid var(--border);border-radius:20px;cursor:pointer;background:var(--surface);color:var(--muted);white-space:nowrap;transition:all .15s}
+.trans-btn:hover{border-color:var(--primary);color:var(--primary)}
+.trans-text{font-size:12.5px;color:var(--muted);line-height:1.6;display:none}
+.trans-text.on{display:block}
+
 </style>
 </head>
 <body>
@@ -791,6 +814,108 @@ function showQuizLoading(){
 }
 
 // ── Part 5 / 6 render ────────────────────────────────────────────────────
+
+// ── Inline mini-dict for hover tooltips (common TOEIC words) ──────────
+const MINI_DICT = {
+  employees:'員工',employee:'員工',encouraged:'被鼓勵的',encourage:'鼓勵',attend:'出席、參加',
+  safety:'安全',training:'訓練、培訓',manager:'主管、經理',report:'報告',submitted:'已提交',
+  submit:'提交',deadline:'截止日期',delivered:'已送達',deliver:'遞送',package:'包裹',
+  regulation:'法規',district:'區域',affect:'影響',effect:'效果、結果',
+  project:'專案',completed:'完成的',schedule:'時程、行程',ahead:'提前',
+  invoice:'發票、請款單',processed:'已處理',process:'處理、程序',
+  approved:'已批准',approve:'批准',merger:'合併',unanimously:'一致地',
+  applicants:'申請人',applicant:'申請人',qualification:'資格',
+  acquisition:'收購',regulatory:'監管的',approval:'批准',
+  quarterly:'每季的',revenue:'收入、營收',expenses:'費用',margin:'利潤空間',
+  implemented:'已實施',implement:'實施、執行',restructuring:'重組',
+  announced:'已宣布',announce:'宣布',partnership:'合作夥伴關係',
+  logistics:'物流',platform:'平台',integrated:'已整合',integrate:'整合',
+  tracking:'追蹤',analytics:'分析',documentation:'文件、文檔',
+  collaboration:'合作',estimated:'估計的',estimate:'估計',
+  disruption:'中斷、干擾',minimize:'最小化、盡量減少',
+  renovation:'翻修、整修',fitness:'健身',membership:'會員資格',
+  administrative:'行政的',correspondence:'信件往來',coordinating:'協調',
+  proficiency:'熟練度',communication:'溝通',resume:'履歷',
+  shortlisted:'入選名單的',candidates:'候選人',candidate:'候選人',
+  reimbursements:'報銷款項',reimbursement:'報銷',portal:'入口網站',
+  submissions:'提交件',submission:'提交',receipts:'收據',receipt:'收據',
+  contingent:'視條件而定',jurisdiction:'管轄區域',
+  markedly:'明顯地',projections:'預測數字',projection:'預測',
+  inconclusive:'無定論的',findings:'研究結果',conduct:'進行；行為',
+  commutes:'通勤',commute:'通勤',office:'辦公室',
+  phased:'分階段的',deployment:'部署、推行',
+  macroeconomic:'總體經濟的',year-over-year:'同比、年比',
+  summary:'摘要',attributable:'歸因於',contracted:'收縮的',
+  strategic:'策略的',freight:'貨運',infrastructure:'基礎設施',
+  shipment:'貨物運送',predictive:'預測性的',customs:'海關',
+  milestone:'里程碑',combined:'結合的',capabilities:'能力',
+  integration:'整合',completed:'完成',
+  proficient:'熟練的',requirements:'要求',requirement:'要求',
+  diploma:'文憑',equivalent:'相等的、同等的',
+  observance:'紀念、遵守',operations:'運營、業務',urgent:'緊急的',
+  supervisor:'主管',restful:'輕鬆的、舒適的',
+  campaign:'活動、行銷活動',engagement:'互動、參與',
+  exceeded:'超過了',exceed:'超過',targets:'目標',target:'目標',
+  refine:'精進、調整',strategy:'策略',
+  deliberate:'審議',amendments:'修正案',amendment:'修正案',bylaws:'章程',
+};
+
+// Build interactive sentence with hover tooltips
+function buildWordTips(text) {
+  // Split preserving punctuation
+  return text.replace(/([a-zA-Z'-]+)/g, (match) => {
+    const key = match.toLowerCase().replace(/['-]/g,'');
+    const meaning = MINI_DICT[key] || MINI_DICT[match.toLowerCase()];
+    if (!meaning) return match;
+    return `<span class="word-tip">${match}<span class="tip-bubble">${meaning}</span></span>`;
+  });
+}
+
+// Fetch translation for full sentence via AI
+async function fetchTranslation(text, targetEl) {
+  targetEl.textContent = '翻譯中...';
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        messages: [{role:'user', content:
+          '請將以下英文翻譯成繁體中文，只回傳翻譯結果，不要任何說明：\n\n' + text.slice(0,500)
+        }]
+      })
+    });
+    const data = await resp.json();
+    targetEl.textContent = data.content?.[0]?.text || '翻譯失敗';
+  } catch(e) {
+    targetEl.textContent = '（翻譯失敗，請確認網路連線）';
+  }
+}
+
+// Build translation toggle row
+function buildTransRow(rawText, containerId) {
+  const row = document.createElement('div');
+  row.className = 'trans-row';
+  const btn = document.createElement('button');
+  btn.className = 'trans-btn';
+  btn.textContent = '🌐 顯示翻譯';
+  const txt = document.createElement('div');
+  txt.className = 'trans-text';
+  let loaded = false;
+  btn.onclick = () => {
+    const showing = txt.classList.toggle('on');
+    btn.textContent = showing ? '🌐 收起翻譯' : '🌐 顯示翻譯';
+    if(showing && !loaded) {
+      loaded = true;
+      fetchTranslation(rawText, txt);
+    }
+  };
+  row.appendChild(btn);
+  row.appendChild(txt);
+  return row;
+}
+
 function renderFillQ(q, isAI){
   quizAnswered = false;
   setQuizTags(isAI);
@@ -799,16 +924,34 @@ function renderFillQ(q, isAI){
   document.getElementById('quizExplain').classList.add('hidden');
   document.getElementById('quizWordChips').innerHTML = '';
 
-  // Show passage for Part 6
   const qEl = document.getElementById('quizQ');
+  // Remove old trans row if any
+  const oldTrans = document.getElementById('fillTransRow');
+  if(oldTrans) oldTrans.remove();
+
+  const blankHtml = '<span style="border-bottom:2px solid var(--primary);color:var(--primary);font-weight:600;padding:0 8px">_______</span>';
+
   if(q.passage){
-    qEl.innerHTML = '<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:12.5px;line-height:1.8;margin-bottom:10px;white-space:pre-wrap">'+
-      q.passage.replace(/\n/g,'<br>')+'</div>' +
-      '<div style="font-size:13px;font-weight:500;margin-bottom:4px">'+
-      (q.q||'').replace(/-------/g,'<span style="border-bottom:2px solid var(--primary);color:var(--primary);padding:0 12px">_______</span>')+'</div>';
+    // Part 6: passage with tooltips + question line
+    const passageWithTips = buildWordTips(q.passage.replace(/-------\s*\(\d+\)/g, '<span style="border-bottom:2px solid var(--primary);color:var(--primary);font-weight:600;padding:0 6px">_______</span>').replace(/\n/g,'<br>'));
+    const qLineWithTips = buildWordTips((q.q||'').replace(/-------/g, '_______')).replace(/_______/g, blankHtml);
+    qEl.innerHTML =
+      '<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:12.5px;line-height:2;margin-bottom:10px">'
+      + passageWithTips + '</div>'
+      + '<div style="font-size:13px;font-weight:500;margin-bottom:4px">' + qLineWithTips + '</div>';
+    // Add translation toggle for passage
+    const transRow = buildTransRow(q.passage, 'fillTransRow');
+    transRow.id = 'fillTransRow';
+    qEl.appendChild(transRow);
   } else {
-    qEl.innerHTML = (q.q||'').replace(/-------/g,
-      '<span style="border-bottom:2px solid var(--primary);color:var(--primary);font-weight:600;padding:0 8px">_______</span>');
+    // Part 5: single sentence with tooltips
+    const rawQ = (q.q||'');
+    const withTips = buildWordTips(rawQ.replace(/-------/g,'_______')).replace(/_______/g, blankHtml);
+    qEl.innerHTML = '<div style="font-size:15px;line-height:2.2">' + withTips + '</div>';
+    // Translation toggle
+    const transRow = buildTransRow(rawQ.replace(/-------/g, '______'), 'fillTransRow');
+    transRow.id = 'fillTransRow';
+    qEl.appendChild(transRow);
   }
 
   const opts = document.getElementById('quizOpts');
@@ -816,13 +959,15 @@ function renderFillQ(q, isAI){
   (q.ch||[]).forEach((c,i)=>{
     const b = document.createElement('button');
     b.className = 'opt';
-    b.innerHTML = '<span style="font-weight:700;margin-right:4px">'+String.fromCharCode(65+i)+'.</span> '+c;
-    b.onclick = () => answerFill(i, q.ans, q.ex, q.words);
+    // Add tooltips to each option word too
+    b.innerHTML = '<span style="font-weight:700;margin-right:4px">'+String.fromCharCode(65+i)+'.</span> '
+      + buildWordTips(c);
+    b.onclick = () => answerFill(i, q.ans, q.ex, q.words, q.zh);
     opts.appendChild(b);
   });
 }
 
-function answerFill(chosen, correct, ex, words){
+function answerFill(chosen, correct, ex, words, zh){
   if(quizAnswered) return;
   quizAnswered = true;
   totalAnswered++; if(chosen===correct) sessionCorrect++;
@@ -835,6 +980,14 @@ function answerFill(chosen, correct, ex, words){
   exEl.classList.remove('hidden');
   renderWordChips(words);
   document.getElementById('quizSessionStat').textContent = `本次 ${sessionCorrect}/${totalAnswered} 答對`;
+  // If AI provided zh translation, fill it in immediately (no API call needed)
+  if(zh){
+    const transRow = document.getElementById('fillTransRow');
+    if(transRow){
+      const transText = transRow.querySelector('.trans-text');
+      if(transText && !transText.textContent) transText.textContent = zh;
+    }
+  }
   if(aiQueue.length < 3) prefetchAI();
 }
 
@@ -850,7 +1003,19 @@ function renderP7(q, isAI){
   document.getElementById('quizExplain').classList.add('hidden');
   document.getElementById('quizWordChips').innerHTML = '';
 
-  document.getElementById('quizPassage').textContent = q.passage || '';
+  // Passage with word tooltips
+  const passEl = document.getElementById('quizPassage');
+  passEl.style.whiteSpace = 'pre-wrap';
+  passEl.innerHTML = buildWordTips(q.passage || '');
+
+  // Translation toggle for passage
+  const oldP7Trans = document.getElementById('p7TransRow');
+  if(oldP7Trans) oldP7Trans.remove();
+  const p7TransRow = buildTransRow(q.passage||'', 'p7TransRow');
+  p7TransRow.id = 'p7TransRow';
+  p7TransRow.style.marginTop = '0';
+  p7TransRow.style.paddingTop = '8px';
+  passEl.parentNode.insertBefore(p7TransRow, passEl.nextSibling);
 
   const subEl = document.getElementById('quizSubQs');
   subEl.innerHTML = '';
@@ -858,7 +1023,7 @@ function renderP7(q, isAI){
     const div = document.createElement('div');
     div.className = 'sub-q';
     div.id = 'subq-'+qi;
-    div.innerHTML = '<div class="sub-q-text">Q'+(qi+1)+'. '+sq.q+'</div>' +
+    div.innerHTML = '<div class="sub-q-text">Q'+(qi+1)+'. '+buildWordTips(sq.q)+'</div>' +
       '<div class="sub-opts" id="sub-opts-'+qi+'"></div>' +
       '<div class="explain-box hidden" id="sub-ex-'+qi+'" style="margin-top:6px"></div>';
     subEl.appendChild(div);
@@ -866,7 +1031,8 @@ function renderP7(q, isAI){
     (sq.ch||[]).forEach((c,i)=>{
       const b = document.createElement('button');
       b.className = 'opt';
-      b.innerHTML = '<span style="font-weight:700;margin-right:4px">'+String.fromCharCode(65+i)+'.</span> '+c;
+      b.innerHTML = '<span style="font-weight:700;margin-right:4px">'+String.fromCharCode(65+i)+'.</span> '
+        + buildWordTips(c);
       b.onclick = () => answerSubQ(qi, i, sq.ans, sq.ex, q.qs.length);
       optsEl.appendChild(b);
     });
@@ -981,7 +1147,7 @@ async function prefetchAI(immediate=false){
 - words 欄位放題目中2-3個重點多益單字
 
 JSON格式（陣列，共${countN}題）：
-[{"q":"句子 -------。","ch":["A","B","C","D"],"ans":0,"ex":"繁體中文解析：考點是...","words":[{"w":"word","m":"中文"}]}]`;
+[{"q":"句子 -------。","zh":"整句的繁體中文翻譯（空格填入正確答案後）","ch":["A","B","C","D"],"ans":0,"ex":"繁體中文解析：考點是...","words":[{"w":"word","m":"中文"}]}]`;
   } else if(quizPart === 'p6'){
     partPrompt = `生成 1 篇「Part 6 段落填空」文章，含 4 道填空題。
 格式與真實多益完全一致：
