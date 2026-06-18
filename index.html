@@ -659,7 +659,7 @@ function spk(t,rate=0.85){
   speechSynthesis.speak(u);
 }
 function copyText(t){ navigator.clipboard.writeText(t).then(()=>alert('已複製：'+t)).catch(()=>{}); }
-function saveDB(){ localStorage.setItem(WB_KEY,JSON.stringify(wordbook)); localStorage.setItem(STAT_KEY,JSON.stringify(stat)); }
+// saveDB defined later with sync support
 function saveToWB(){
   if(!selWord) return;
   if(wordbook.find(w=>w.word===selWord)){ alert('此單字已在單字本中'); return; }
@@ -844,7 +844,7 @@ const MINI_DICT = {
   inconclusive:'無定論的',findings:'研究結果',conduct:'進行；行為',
   commutes:'通勤',commute:'通勤',office:'辦公室',
   phased:'分階段的',deployment:'部署、推行',
-  macroeconomic:'總體經濟的',year-over-year:'同比、年比',
+  macroeconomic:'總體經濟的','year-over-year':'同比、年比',
   summary:'摘要',attributable:'歸因於',contracted:'收縮的',
   strategic:'策略的',freight:'貨運',infrastructure:'基礎設施',
   shipment:'貨物運送',predictive:'預測性的',customs:'海關',
@@ -1324,12 +1324,6 @@ function clearCustomPart(part, diff){
 
 // ── Tab handlers ──────────────────────────────────────────────────────────
 // Tab handlers — clear AI queue when settings change
-function resetQuiz(){
-  aiQueue=[];
-  aiGenerating=false;
-  quizIdx=0;
-  loadQ();
-}
 // Part tabs
 document.getElementById('quizParts').querySelectorAll('.ctab').forEach(el=>{
   el.onclick=()=>{
